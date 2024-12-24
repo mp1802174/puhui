@@ -229,6 +229,99 @@ class ImportController extends BaseController
         }
     }
 
+    public function importCustomerInfo()
+    {
+        Log::info('=== 开始导入客户基本信息 ===');
+        
+        try {
+            $pdo = $this->getPDO();
+            
+            // 获取原始数据总数
+            $stmt = $pdo->query("SELECT COUNT(*) FROM daily_record");
+            $total = $stmt->fetchColumn();
+            Log::info("原始表daily_record总记录数: {$total}");
+            
+            $pages = ceil($total / self::BATCH_SIZE);
+            
+            for ($page = 0; $page < $pages; $page++) {
+                $pdo->beginTransaction();
+                Log::info("=== 开始处理第 " . ($page + 1) . " 批次数据 ===");
+                
+                try {
+                    $offset = $page * self::BATCH_SIZE;
+                    $stmt = $pdo->prepare("SELECT * FROM daily_record LIMIT :offset, :limit");
+                    $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+                    $stmt->bindValue(':limit', self::BATCH_SIZE, \PDO::PARAM_INT);
+                    $stmt->execute();
+                    $records = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                    
+                    foreach ($records as $record) {
+                        // 检查记录是否存在
+                        $stmt = $pdo->prepare("SELECT * FROM customer_info WHERE 客户编号 = ? AND 对公客户账号 = ? AND 账户性质 = ?");
+                        $stmt->execute([$record['客户编号'], $record['对公客户账号'], $record['账户性质']]);
+                        $existingRecord = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        
+                        if ($existingRecord) {
+                            // 记录存在，检查其他字段是否需要更新
+                            $needUpdate = false;
+                            foreach ($record as $field => $value) {
+                                if ($field != 'id' && $existingRecord[$field] != $value) {
+                                    $needUpdate = true;
+                                    break;
+                                }
+                            }
+                            
+                            if ($needUpdate) {
+                                // 需要更新
+                                $updateFields = [];
+                                $updateValues = [];
+                                foreach ($record as $field => $value) {
+                                    if ($field != 'id') {
+                                        $updateFields[] = "`$field` = ?";
+                                        $updateValues[] = $value;
+                                    }
+                                }
+                                $updateValues[] = $existingRecord['id'];
+                                
+                                $sql = "UPDATE customer_info SET " . implode(', ', $updateFields) . " WHERE id = ?";
+                                $stmt = $pdo->prepare($sql);
+                                $stmt->execute($updateValues);
+                            }
+                        } else {
+                            // 记录不存在，插入新记录
+                            $fields = array_keys($record);
+                            $values = array_values($record);
+                            $placeholders = str_repeat('?,', count($fields) - 1) . '?';
+                            
+                            $sql = "INSERT INTO customer_info (" . implode(',', $fields) . ") VALUES ($placeholders)";
+                            $stmt = $pdo->prepare($sql);
+                            $stmt->execute($values);
+                        }
+                    }
+                    
+                    $pdo->commit();
+                    
+                    // 记录每批次完成后的统计
+                    $customerCount = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
+                    Log::info("批次{$page}完成 - customer_info表记录数:{$customerCount}");
+                    
+                } catch (\Exception $e) {
+                    $pdo->rollBack();
+                    Log::error("批次{$page}处理失败: " . $e->getMessage());
+                    throw $e;
+                }
+            }
+            
+            // 最终统计
+            $finalCount = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
+            Log::info("导入完成最终统计:\n- 原始记录:{$total}\n- customer_info:{$finalCount}");
+            
+        } catch (\Exception $e) {
+            Log::error("导入失败: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
     private function buildCustomerInfoData($record)
     {
         return [
