@@ -1,0 +1,135 @@
+{extend name="layout/base" /}
+
+{block name="content"}
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-header">导入数据</div>
+        <div class="layui-card-body">
+            <form class="layui-form" action="" method="post" enctype="multipart/form-data">
+                <div class="layui-form-item">
+                    <div class="layui-upload-drag" id="uploadExcel">
+                        <i class="layui-icon layui-icon-upload"></i>
+                        <p>点击上传，或将文件拖拽到此处</p>
+                        <div class="layui-hide" id="uploadPreview">
+                            <hr>
+                            <p>已选择: <span id="uploadFileName"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-form-item layui-hide" id="progressContainer">
+                    <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="importProgress">
+                        <div class="layui-progress-bar" lay-percent="0%"></div>
+                    </div>
+                    <div class="layui-word-aux" style="margin-top: 10px;">
+                        已处理：<span id="currentCount">0</span>/<span id="totalCount">0</span> 条
+                        成功：<span id="successCount" style="color: #5FB878;">0</span> 条
+                        失败：<span id="errorCount" style="color: #FF5722;">0</span> 条
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{/block}
+
+{block name="script"}
+<script>
+layui.use(['upload', 'element'], function(){
+    var upload = layui.upload;
+    var element = layui.element;
+    var $ = layui.$;
+    
+    var currentFilePath = '';
+    
+    // 上传实例
+    upload.render({
+        elem: '#uploadExcel',
+        url: '{:url("import")}',
+        accept: 'file',
+        exts: 'xls|xlsx',
+        size: 20480, // 20MB
+        before: function(obj){
+            // 显示进度条
+            $('#progressContainer').removeClass('layui-hide');
+            element.progress('importProgress', '0%');
+            // 重置计数器
+            $('#currentCount').text('0');
+            $('#totalCount').text('0');
+            $('#successCount').text('0');
+            $('#errorCount').text('0');
+            // 清除之前的定时器
+            if(window.progressTimer) {
+                clearInterval(window.progressTimer);
+                window.progressTimer = null;
+            }
+        },
+        done: function(res){
+            if(res.code == 1){
+                layer.msg(res.msg, {icon: 1});
+                currentFilePath = res.filePath;
+                // 开始查询进度
+                startProgressQuery();
+            } else {
+                layer.msg(res.msg, {icon: 2});
+                // 隐藏进度条
+                $('#progressContainer').addClass('layui-hide');
+            }
+        },
+        error: function(){
+            layer.msg('上传失败', {icon: 2});
+            // 隐藏进度条
+            $('#progressContainer').addClass('layui-hide');
+            if(window.progressTimer) {
+                clearInterval(window.progressTimer);
+                window.progressTimer = null;
+            }
+        }
+    });
+    
+    // 开始查询进度
+    function startProgressQuery() {
+        if(!currentFilePath) return;
+        
+        if(window.progressTimer) {
+            clearInterval(window.progressTimer);
+        }
+        
+        window.progressTimer = setInterval(function(){
+            $.ajax({
+                url: '{:url("importProgress")}',
+                data: {filePath: currentFilePath},
+                success: function(res){
+                    if(res.code == 1){
+                        var data = res.data;
+                        // 更新进度条
+                        element.progress('importProgress', data.percent + '%');
+                        // 更新统计信息
+                        $('#currentCount').text(data.current);
+                        $('#totalCount').text(data.total);
+                        $('#successCount').text(data.success);
+                        $('#errorCount').text(data.error);
+                        
+                        // 如果导入完成，停止查询
+                        if(data.status == 'completed'){
+                            clearInterval(window.progressTimer);
+                            window.progressTimer = null;
+                        }
+                    } else {
+                        // 发生错误，停止查询
+                        clearInterval(window.progressTimer);
+                        window.progressTimer = null;
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                },
+                error: function(){
+                    // 发生错误，停止查询
+                    clearInterval(window.progressTimer);
+                    window.progressTimer = null;
+                    layer.msg('查询进度失败', {icon: 2});
+                }
+            });
+        }, 1000); // 每秒查询一次
+    }
+});
+</script>
+{/block} 
