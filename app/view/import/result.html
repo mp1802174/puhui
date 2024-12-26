@@ -1,0 +1,40 @@
+<div class="result-container">
+    <h3>数据导入完成</h3>
+    <div class="stats">
+        <p>原始记录：{$data.total}</p>
+        <p>最终记录：{$data.final_count}</p>
+    </div>
+    
+    <button onclick="checkCount()" class="btn btn-primary">查询当前记录数</button>
+</div>
+
+<script>
+function checkCount() {
+    fetch('/import/checkCustomerCount')
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 1) {
+                alert(`查询时间：${data.data.query_time}\n实际记录数：${data.data.count}`);
+            } else {
+                alert('查询失败：' + data.msg);
+            }
+        })
+        .catch(error => {
+            alert('查询出错：' + error);
+        });
+}
+</script>
+
+<style>
+.result-container {
+    padding: 20px;
+    text-align: center;
+}
+.stats {
+    margin: 20px 0;
+}
+.btn {
+    padding: 10px 20px;
+    margin-top: 20px;
+}
+</style> 

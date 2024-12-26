@@ -19,6 +19,7 @@ Route::get('hello/:name', 'index/hello');
 //Route::get('import', 'Import/index');
 //Route::post('import/import', 'Import/import');
 Route::get('import/data', 'ImportController/importData');
+Route::get('import/check', 'ImportController/checkCustomerCount');
 
 // 每日记录路由
 Route::get('daily_record/index', 'DailyRecord/index');
