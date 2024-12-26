@@ -40,6 +40,10 @@ class ImportController
         try {
             $pdo = $this->getPDO();
             
+            // 先获取原始数据数量
+            $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
+            Log::info("原始数据数量: {$sourceCount} 条记录");
+            
             // 1. 导入客户基本信息
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
             $pdo->exec("TRUNCATE TABLE customer_info");
@@ -104,14 +108,19 @@ class ImportController
             
             $pdo->exec($balanceSql);
             
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-            
             $balanceCount = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
             Log::info("余额信息导入完成: {$balanceCount} 条记录");
             
-            $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
+            // 3. 清空原始数据表
+            $pdo->exec("TRUNCATE TABLE daily_record");
+            Log::info("清空原始数据表 daily_record");
+            
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
             
             $pdo = null;
+            
+            // 清理缓存文件
+            $this->clearCache();
             
             // 返回简单的消息
             return "<script>alert('导入完成！\\n原始数据：{$sourceCount} 条\\n客户信息：{$infoCount} 条\\n余额信息：{$balanceCount} 条');window.location.href='/daily_record/index';</script>";
@@ -122,8 +131,49 @@ class ImportController
                 $pdo = null;
             }
             
+            // 发生错误时也要清理缓存
+            $this->clearCache();
+            
             Log::error("导入失败: " . $e->getMessage());
             return "<script>alert('导入失败：" . addslashes($e->getMessage()) . "');window.location.href='/daily_record/index';</script>";
+        }
+    }
+
+    /**
+     * 清理缓存文件
+     */
+    private function clearCache()
+    {
+        // 清理 runtime/cache 目录
+        $runtimePath = root_path() . 'runtime' . DIRECTORY_SEPARATOR . 'cache';
+        $this->deleteFiles($runtimePath);
+        
+        // 清理 public/storage/excel 目录
+        $excelPath = public_path() . 'storage' . DIRECTORY_SEPARATOR . 'excel';
+        $this->deleteFiles($excelPath);
+    }
+
+    /**
+     * 删除目录下的所有文件
+     * @param string $path 目录路径
+     */
+    private function deleteFiles($path)
+    {
+        if (!is_dir($path)) {
+            return;
+        }
+        
+        $files = scandir($path);
+        foreach ($files as $file) {
+            if ($file != '.' && $file != '..') {
+                $filePath = $path . DIRECTORY_SEPARATOR . $file;
+                if (is_file($filePath)) {
+                    unlink($filePath);
+                } elseif (is_dir($filePath)) {
+                    $this->deleteFiles($filePath);
+                    rmdir($filePath);
+                }
+            }
         }
     }
 
