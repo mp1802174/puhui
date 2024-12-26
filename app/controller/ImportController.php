@@ -35,20 +35,16 @@ class ImportController
      */
     public function importData()
     {
-        Log::info('=== 开始简单导入测试 ===');
+        Log::info('=== 开始导入数据 ===');
         
         try {
             $pdo = $this->getPDO();
             
-            // 1. 先禁用外键检查
+            // 1. 导入客户基本信息
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-            
-            // 2. 清空目标表
             $pdo->exec("TRUNCATE TABLE customer_info");
-            Log::info("已清空customer_info表");
             
-            // 3. 直接插入数据
-            $sql = "INSERT INTO customer_info (
+            $infoSql = "INSERT INTO customer_info (
                 开户日期, 客户编号, 对公客户账号, 客户名称, 
                 核算机构, 客户责任部门, 账户性质, 核算机构编号,
                 经办人员工编号, 业务标识号, 
@@ -71,29 +67,54 @@ class ImportController
                 营销人名称一十一, 营销人名称一十二
             FROM daily_record";
             
-            $pdo->exec($sql);
+            $pdo->exec($infoSql);
             
-            // 4. 恢复外键检查
+            $infoCount = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
+            Log::info("客户基本信息导入完成: {$infoCount} 条记录");
+            
+            // 2. 导入余额信息
+            $pdo->exec("TRUNCATE TABLE daily_balance");
+            
+            $balanceSql = "INSERT INTO daily_balance (
+                customer_id,
+                日期,
+                账户余额,
+                时点存款比昨日,
+                时点存款比月初,
+                时点存款比年初,
+                月日均存款余额,
+                年日均存款余额,
+                年日均存款比昨日
+            )
+            SELECT 
+                i.ID as customer_id,
+                r.年日均最新日期 as 日期,
+                r.账户余额,
+                r.时点存款比昨日,
+                r.时点存款比月初,
+                r.时点存款比年初,
+                r.月日均存款余额,
+                r.年日均存款余额,
+                r.年日均存款比昨日
+            FROM daily_record r
+            INNER JOIN customer_info i ON 
+                r.客户编号 = i.客户编号 AND 
+                r.对公客户账号 = i.对公客户账号 AND 
+                r.账户性质 = i.账户性质";
+            
+            $pdo->exec($balanceSql);
+            
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
             
-            // 5. 检查结果
-            $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
-            $targetCount = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
+            $balanceCount = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
+            Log::info("余额信息导入完成: {$balanceCount} 条记录");
             
-            Log::info("导入完成:\n" .
-                "- 原表记录数: {$sourceCount}\n" .
-                "- 导入记录数: {$targetCount}");
-                
+            $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
+            
             $pdo = null;
             
-            return json([
-                'code' => 1,
-                'msg' => '导入完成',
-                'data' => [
-                    'source_count' => $sourceCount,
-                    'target_count' => $targetCount
-                ]
-            ]);
+            // 返回简单的消息
+            return "<script>alert('导入完成！\\n原始数据：{$sourceCount} 条\\n客户信息：{$infoCount} 条\\n余额信息：{$balanceCount} 条');window.location.href='/daily_record/index';</script>";
             
         } catch (\Exception $e) {
             if (isset($pdo)) {
@@ -102,10 +123,7 @@ class ImportController
             }
             
             Log::error("导入失败: " . $e->getMessage());
-            return json([
-                'code' => 0,
-                'msg' => '导入失败：' . $e->getMessage()
-            ]);
+            return "<script>alert('导入失败：" . addslashes($e->getMessage()) . "');window.location.href='/daily_record/index';</script>";
         }
     }
 
