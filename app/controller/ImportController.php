@@ -41,13 +41,10 @@ class ImportController
         try {
             $pdo = $this->getPDO();
             
-<<<<<<< HEAD
             // 先获取原始数据数量
             $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
             Log::info("原始数据数量: {$sourceCount} 条记录");
             
-=======
->>>>>>> a1021d9b1a416bfe73b01d5733c1d6e40893f15f
             // 1. 导入客户基本信息
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
             $pdo->exec("TRUNCATE TABLE customer_info");
@@ -109,7 +106,6 @@ class ImportController
                 r.客户编号 = i.客户编号 AND 
                 r.对公客户账号 = i.对公客户账号 AND 
                 r.账户性质 = i.账户性质";
-<<<<<<< HEAD
             
             $pdo->exec($balanceSql);
             
@@ -129,26 +125,6 @@ class ImportController
             
             // 返回简单的消息
             return "<script>alert('导入完成！\\n原始数据：{$sourceCount} 条\\n客户信息：{$infoCount} 条\\n余额信息：{$balanceCount} 条');window.location.href='/daily_record/index';</script>";
-=======
-                
-            $pdo->exec($balanceSql);
-            
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-            
-            $balanceCount = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
-            Log::info("余额信息导入完成: {$balanceCount} 条记录");
-            
-            $pdo = null;
-            
-            return json([
-                'code' => 1,
-                'msg' => '数据导入完成',
-                'data' => [
-                    'info_count' => $infoCount,
-                    'balance_count' => $balanceCount
-                ]
-            ]);
->>>>>>> a1021d9b1a416bfe73b01d5733c1d6e40893f15f
             
         } catch (\Exception $e) {
             if (isset($pdo)) {
