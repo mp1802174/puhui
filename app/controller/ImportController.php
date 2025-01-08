@@ -46,7 +46,7 @@ class ImportController
             
             // 1. 导入客户基本信息
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-            $pdo->exec("TRUNCATE TABLE customer_info");
+            // $pdo->exec("TRUNCATE TABLE customer_info");
             
             $infoSql = "INSERT INTO customer_info (
                 开户日期, 客户编号, 对公客户账号, 客户名称, 
@@ -77,7 +77,7 @@ class ImportController
             Log::info("客户基本信息导入完成: {$infoCount} 条记录");
             
             // 2. 导入余额信息
-            $pdo->exec("TRUNCATE TABLE daily_balance");
+            // $pdo->exec("TRUNCATE TABLE daily_balance");
             
             $balanceSql = "INSERT INTO daily_balance (
                 customer_id,
