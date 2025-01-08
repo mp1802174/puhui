@@ -116,6 +116,7 @@ class ImportController
             Log::info("余额信息导入完成: {$balanceCount} 条记录");
             
             // 3. 清空原始数据表
+            $pdo->exec("INSERT INTO daily_record_bak SELECT * FROM daily_record");
             $pdo->exec("TRUNCATE TABLE daily_record");
             Log::info("清空原始数据表 daily_record");
             
