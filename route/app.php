@@ -10,6 +10,11 @@
 // +----------------------------------------------------------------------
 use think\facade\Route;
 
+// 加载 app/route 目录下的所有路由文件
+foreach (glob(__DIR__ . '/route/*.php') as $routeFile) {
+    require_once $routeFile;
+}
+
 Route::get('think', function () {
     return 'hello,ThinkPHP6!';
 });

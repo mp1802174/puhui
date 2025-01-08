@@ -69,7 +69,11 @@ class ImportController
                 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五,
                 营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十,
                 营销人名称一十一, 营销人名称一十二
-            FROM daily_record";
+            FROM daily_record
+            ON DUPLICATE KEY UPDATE
+                customer_info.账户状态 = COALESCE(VALUES(账户状态), customer_info.账户状态),
+                customer_info.客户名称 = COALESCE(VALUES(客户名称), customer_info.客户名称),
+                customer_info.核算机构 = COALESCE(VALUES(核算机构), customer_info.核算机构)";
             
             $pdo->exec($infoSql);
             
