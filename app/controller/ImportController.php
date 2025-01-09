@@ -58,6 +58,7 @@ class ImportController
                 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五,
                 营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十,
                 营销人名称一十一, 营销人名称一十二,
+                账户状态,
                 created_at
             )
             SELECT 
@@ -70,6 +71,7 @@ class ImportController
                 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五,
                 营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十,
                 营销人名称一十一, 营销人名称一十二,
+                账户状态,
                 NOW() as created_at
             FROM daily_record
             ON DUPLICATE KEY UPDATE
