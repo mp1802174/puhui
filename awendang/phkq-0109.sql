@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： localhost
--- 生成日期： 2025-01-09 10:34:24
+-- 生成日期： 2025-01-09 14:30:12
 -- 服务器版本： 5.7.26
 -- PHP 版本： 7.3.4
 
@@ -91,7 +91,8 @@ CREATE TABLE `daily_balance` (
   `年日均存款比月初` decimal(15,2) DEFAULT NULL,
   `年日均存款比年初` decimal(15,2) DEFAULT NULL,
   `认定状态` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `认定日期` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `认定日期` varchar(12) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -205,7 +206,8 @@ CREATE TABLE `daily_record_bak` (
   `营销人名称九` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `营销人名称一十` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `营销人名称一十一` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `营销人名称一十二` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `营销人名称一十二` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
