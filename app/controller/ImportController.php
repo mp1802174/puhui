@@ -57,7 +57,8 @@ class ImportController
                 营销人一十一, 营销人一十二,
                 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五,
                 营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十,
-                营销人名称一十一, 营销人名称一十二
+                营销人名称一十一, 营销人名称一十二,
+                created_at
             )
             SELECT 
                 开户日期, 客户编号, 对公客户账号, 客户名称,
@@ -68,7 +69,8 @@ class ImportController
                 营销人一十一, 营销人一十二,
                 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五,
                 营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十,
-                营销人名称一十一, 营销人名称一十二
+                营销人名称一十一, 营销人名称一十二,
+                NOW() as created_at
             FROM daily_record
             ON DUPLICATE KEY UPDATE
                 customer_info.账户状态 = COALESCE(VALUES(账户状态), customer_info.账户状态),
@@ -92,7 +94,8 @@ class ImportController
                 时点存款比年初,
                 月日均存款余额,
                 年日均存款余额,
-                年日均存款比昨日
+                年日均存款比昨日,
+                created_at
             )
             SELECT 
                 i.ID as customer_id,
@@ -103,7 +106,8 @@ class ImportController
                 r.时点存款比年初,
                 r.月日均存款余额,
                 r.年日均存款余额,
-                r.年日均存款比昨日
+                r.年日均存款比昨日,
+                NOW() as created_at
             FROM daily_record r
             INNER JOIN customer_info i ON 
                 r.客户编号 = i.客户编号 AND 
@@ -116,7 +120,7 @@ class ImportController
             Log::info("余额信息导入完成: {$balanceCount} 条记录");
             
             // 3. 清空原始数据表
-            $pdo->exec("INSERT INTO daily_record_bak SELECT * FROM daily_record");
+            $pdo->exec("INSERT INTO daily_record_bak SELECT *, NOW() as created_at FROM daily_record");
             $pdo->exec("TRUNCATE TABLE daily_record");
             Log::info("清空原始数据表 daily_record");
             
