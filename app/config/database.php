@@ -35,6 +35,7 @@ return [
             'hostport' => '3306',
             // 设置SQL模式
             'params'         => [
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
                 PDO::ATTR_CASE => PDO::CASE_NATURAL,
                 PDO::ATTR_STRINGIFY_FETCHES => false,
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4;SET sql_mode='ANSI_QUOTES,NO_AUTO_VALUE_ON_ZERO';"

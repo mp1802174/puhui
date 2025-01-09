@@ -3,20 +3,16 @@ declare(strict_types=1);
 
 namespace app\controller;
 
+use think\facade\Db;
 use think\facade\View;
 use think\Request;
 
 class HierarchyController
 {
-    public function index()
+    public function index(Request $request)
     {
-        return View::fetch('hierarchy');
-    }
-
-    public function getHierarchyData(Request $request)
-    {
-        $level = $request->get('level', 'city'); // 默认从市行层级开始
-        $parentId = $request->get('parent_id', null); // 上级ID
+        $level = $request->get('level', 'city');
+        $parentId = $request->get('parent_id', null);
 
         switch ($level) {
             case 'city':
@@ -35,7 +31,7 @@ class HierarchyController
                 $data = [];
         }
 
-        return json(['code' => 1, 'data' => $data]);
+        return View::fetch('hierarchy/hierarchy', ['data' => $data, 'level' => $level]);
     }
 
     private function getCityData()
@@ -44,7 +40,8 @@ class HierarchyController
             ->field('市行机构号, 市行名称, SUM(账户余额) as total_balance')
             ->join('daily_balance', 'jigou.核算机构编号 = daily_balance.customer_id')
             ->group('市行机构号, 市行名称')
-            ->select();
+            ->select()
+            ->fetchAll();
     }
 
     private function getBranchData($cityId)

@@ -35,3 +35,5 @@ Route::get('daily_record/stop_import', 'DailyRecord/stopImport');
 // 批量导入接口
 Route::post('daily_record/import_batch', 'DailyRecord/importBatch');
 
+Route::get('hierarchy', 'HierarchyController/index');
+
