@@ -16,15 +16,15 @@
 <body>
     <div class="container">
         <div class="level">
-            <h2>{{ level }} 层级</h2>
+            <h2>{$level} 层级</h2>
             <ul>
-                {% for item in data %}
+                {foreach $data as $item}
                 <li>
-                    <a href="?level={{ next_level }}&parent_id={{ item.id }}">
-                        {{ item.name }} - 余额: {{ item.total_balance }}
+                    <a href="?level={$next_level}&parent_name={$item.name}">
+                        {$item.name} - 余额: {$item.balance}
                     </a>
                 </li>
-                {% endfor %}
+                {/foreach}
             </ul>
         </div>
     </div>

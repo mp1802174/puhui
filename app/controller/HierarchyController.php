@@ -14,6 +14,9 @@ class HierarchyController
         $level = $request->get('level', 'city');
         $parentId = $request->get('parent_id', null);
 
+        // 调试输出
+        dump('Level: ' . $level);
+        
         switch ($level) {
             case 'city':
                 $data = $this->getCityData();
@@ -31,46 +34,148 @@ class HierarchyController
                 $data = [];
         }
 
-        return View::fetch('hierarchy/hierarchy', ['data' => $data, 'level' => $level]);
+        // 确保 $data 是数组
+        if (!is_array($data)) {
+            $data = [];
+        }
+
+        // 调试输出
+        dump($data);
+
+        return View::fetch('hierarchy/hierarchy', [
+            'data' => $data,
+            'level' => $level,
+            'next_level' => $this->getNextLevel($level)
+        ]);
     }
 
     private function getCityData()
     {
-        return Db::table('jigou')
-            ->field('市行机构号, 市行名称, SUM(账户余额) as total_balance')
-            ->join('daily_balance', 'jigou.核算机构编号 = daily_balance.customer_id')
+        $data = Db::name('jigou')
+            ->field('市行机构号 as id, 市行名称 as name, SUM(daily_balance.账户余额) as total_balance')
+            ->join('customer_info', 'jigou.核算机构编号 = customer_info.核算机构编号')
+            ->join('daily_balance', 'customer_info.ID = daily_balance.customer_id')
             ->group('市行机构号, 市行名称')
             ->select()
-            ->fetchAll();
+            ->toArray();
+
+        return $data;
     }
 
     private function getBranchData($cityId)
     {
-        return Db::table('jigou')
-            ->field('支行机构号, 支行名称, SUM(账户余额) as total_balance')
-            ->join('daily_balance', 'jigou.核算机构编号 = daily_balance.customer_id')
-            ->where('市行机构号', $cityId)
-            ->group('支行机构号, 支行名称')
-            ->select();
+        // 调试输出
+        dump('City ID: ' . $cityId);
+
+        $sql = "SELECT 支行机构号 as id, 支行名称 as name, SUM(daily_balance.账户余额) as total_balance
+                FROM jigou
+                INNER JOIN customer_info ON jigou.核算机构编号 = customer_info.核算机构编号
+                INNER JOIN daily_balance ON customer_info.ID = daily_balance.customer_id
+                WHERE jigou.市行机构号 = :cityId
+                GROUP BY 支行机构号, 支行名称";
+
+        $data = Db::query($sql, ['cityId' => $cityId]);
+
+        return $data;
     }
 
     private function getAccountingData($branchId)
     {
-        return Db::table('jigou')
-            ->field('核算机构编号, 核算机构, SUM(账户余额) as total_balance')
-            ->join('daily_balance', 'jigou.核算机构编号 = daily_balance.customer_id')
-            ->where('支行机构号', $branchId)
-            ->group('核算机构编号, 核算机构')
-            ->select();
+        $sql = "SELECT jigou.核算机构编号 as id, jigou.核算机构 as name, SUM(daily_balance.账户余额) as total_balance
+                FROM jigou
+                INNER JOIN customer_info ON jigou.核算机构编号 = customer_info.核算机构编号
+                INNER JOIN daily_balance ON customer_info.ID = daily_balance.customer_id
+                WHERE jigou.支行机构号 = :branchId
+                GROUP BY jigou.核算机构编号, jigou.核算机构";
+
+        $data = Db::query($sql, ['branchId' => $branchId]);
+
+        return $data;
     }
 
     private function getEmployeeData($accountingId)
     {
-        return Db::table('customer_info')
-            ->field('SUBSTRING_INDEX(SUBSTRING_INDEX(营销人名称一, ":", 1), "-", -1) as employee_name, SUM(账户余额) as total_balance')
-            ->join('daily_balance', 'customer_info.ID = daily_balance.customer_id')
-            ->where('核算机构编号', $accountingId)
-            ->group('employee_name')
-            ->select();
+        $fields = [];
+        $fieldNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '一十', '一十一', '一十二'];
+
+        foreach ($fieldNames as $index => $chineseNumber) {
+            $fieldName = "营销人名称{$chineseNumber}";
+            $fields[] = "SUBSTRING_INDEX(SUBSTRING_INDEX({$fieldName}, ':', 1), '-', -1) as name{$index}";
+            $fields[] = "SUM(daily_balance.账户余额 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as balance{$index}";
+        }
+
+        $groupByFields = [];
+        foreach (array_keys($fieldNames) as $index) {
+            $groupByFields[] = "name{$index}";
+        }
+
+        $sql = "SELECT " . implode(', ', $fields) . "
+                FROM customer_info
+                INNER JOIN daily_balance ON customer_info.ID = daily_balance.customer_id
+                WHERE customer_info.核算机构编号 = :accountingId
+                GROUP BY " . implode(', ', $groupByFields);
+
+        $rawData = Db::query($sql, ['accountingId' => $accountingId]);
+
+        // 合并员工数据
+        $mergedData = [];
+        foreach ($rawData as $row) {
+            for ($i = 0; $i < count($fieldNames); $i++) {
+                if (!empty($row["name{$i}"])) {
+                    $name = $row["name{$i}"];
+                    if (!isset($mergedData[$name])) {
+                        $mergedData[$name] = [
+                            'name' => $name,
+                            'balance' => 0
+                        ];
+                    }
+                    $mergedData[$name]['balance'] += $row["balance{$i}"];
+                }
+            }
+        }
+        $data = array_values($mergedData);
+
+        // 调试输出
+        var_dump($data);
+
+        return $data;
+    }
+
+    private function getNextLevel($currentLevel)
+    {
+        $levels = [
+            'city' => 'branch',
+            'branch' => 'accounting',
+            'accounting' => 'employee'
+        ];
+        return $levels[$currentLevel] ?? '';
+    }
+
+    private function getCompanyData($employeeName, $accountingId)
+    {
+        $fields = [];
+        $fieldNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '一十', '一十一', '一十二'];
+        
+        $conditions = [];
+        foreach ($fieldNames as $chineseNumber) {
+            $conditions[] = "营销人名称{$chineseNumber} LIKE :employee_name";
+        }
+
+        $sql = "SELECT 
+                    customer_info.名称 as name,
+                    daily_balance.账户余额 as balance
+                FROM customer_info
+                INNER JOIN daily_balance ON customer_info.ID = daily_balance.customer_id
+                WHERE (" . implode(' OR ', $conditions) . ")
+                AND customer_info.核算机构编号 = :accounting_id";  // 确保在同一核算机构下
+
+        $params = [
+            'employee_name' => "%{$employeeName}%",
+            'accounting_id' => $accountingId
+        ];
+
+        $data = Db::query($sql, $params);
+
+        return $data;
     }
 } 
