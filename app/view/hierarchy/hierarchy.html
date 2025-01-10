@@ -20,8 +20,8 @@
             <ul>
                 {foreach $data as $item}
                 <li>
-                    <a href="?level={$next_level}&parent_name={$item.name}">
-                        {$item.name} - 余额: {$item.balance}
+                    <a href="?level={$next_level}&{if isset($item.id)}parent_id={$item.id}{else}parent_name={$item.name}{/if}" target="_blank">
+                        {$item.name} - 余额: {if isset($item.balance)}{$item.balance}{else}{$item.total_balance}{/if}
                     </a>
                 </li>
                 {/foreach}
