@@ -49,15 +49,24 @@ class HierarchyController
         ]);
     }
 
-    private function getCityData()
+    private function getCityData($date = null)
     {
-        $data = Db::name('jigou')
-            ->field('市行机构号 as id, 市行名称 as name, SUM(daily_balance.账户余额) as total_balance')
-            ->join('customer_info', 'jigou.核算机构编号 = customer_info.核算机构编号')
-            ->join('daily_balance', 'customer_info.ID = daily_balance.customer_id')
-            ->group('市行机构号, 市行名称')
-            ->select()
-            ->toArray();
+        // 如果没有指定日期，获取最新日期
+        if (!$date) {
+            $date = Db::query("SELECT 日期 FROM daily_balance ORDER BY 日期 DESC LIMIT 1")[0]['日期'];
+        }
+
+        $sql = "SELECT 
+                    jigou.市行机构号 as id, 
+                    jigou.市行名称 as name, 
+                    SUM(db.账户余额) as total_balance
+                FROM daily_balance db
+                JOIN customer_info ci ON db.customer_id = ci.ID
+                JOIN jigou ON ci.核算机构编号 = jigou.核算机构编号
+                WHERE db.日期 = :date
+                GROUP BY jigou.市行机构号, jigou.市行名称";
+
+        $data = Db::query($sql, ['date' => $date]);
 
         return $data;
     }
