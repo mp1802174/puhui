@@ -1,5 +1,9 @@
-       /*
-     !/app/
-     !/route/
-     !/public/static/
-     !.gitignore
+/*
+!/app/
+!/route/
+!/public/static/
+!.gitignore
+!/awendang/
+!composer.json
+!composer.lock
+!think
