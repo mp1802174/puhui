@@ -16,9 +16,6 @@ class HierarchyController
         $parentName = $request->get('parent_name', null);
         $accountingId = $request->get('accounting_id', null);
 
-        // 调试输出
-        dump('Level: ' . $level);
-        
         switch ($level) {
             case 'city':
                 $data = $this->getCityData();
@@ -43,9 +40,6 @@ class HierarchyController
         if (!is_array($data)) {
             $data = [];
         }
-
-        // 调试输出
-        dump($data);
 
         return View::fetch('hierarchy/hierarchy', [
             'data' => $data,
@@ -78,9 +72,6 @@ class HierarchyController
 
     private function getBranchData($cityId)
     {
-        // 调试输出
-        dump('City ID: ' . $cityId);
-
         $sql = "SELECT 支行机构号 as id, 支行名称 as name, SUM(daily_balance.账户余额) as total_balance
                 FROM jigou
                 INNER JOIN customer_info ON jigou.核算机构编号 = customer_info.核算机构编号
@@ -149,9 +140,6 @@ class HierarchyController
         }
         $data = array_values($mergedData);
 
-        // 调试输出
-        var_dump($data);
-
         return $data;
     }
 
@@ -168,15 +156,8 @@ class HierarchyController
 
     private function getCompanyData($employeeName, $accountingId)
     {
-        // 调试输出
-        dump('Debug Info:');
-        dump('Employee Name: ' . $employeeName);
-        dump('Accounting ID: ' . $accountingId);
-        dump('Accounting ID Type: ' . gettype($accountingId));
-
         // 如果没有指定日期，获取最新日期
         $latestDate = Db::query("SELECT 日期 FROM daily_balance ORDER BY 日期 DESC LIMIT 1")[0]['日期'];
-        dump('Latest Date: ' . $latestDate);
 
         // 构建查询
         $sql = "SELECT 
@@ -220,22 +201,11 @@ class HierarchyController
             'employeeName12' => '%' . $employeeName . '%'
         ];
 
-        // 调试输出SQL
-        dump('SQL Query:');
-        dump($sql);
-        dump('Params:');
-        dump($params);
-
         // 执行查询
         try {
             $result = Db::query($sql, $params);
-            dump('Query Result:');
-            dump($result);
             return $result;
         } catch (\Exception $e) {
-            dump('Error:');
-            dump($e->getMessage());
-            dump($e->getTraceAsString());
             throw $e;
         }
     }
