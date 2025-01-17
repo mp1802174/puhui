@@ -3,30 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hierarchy Data Viewer</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .container { width: 80%; margin: 0 auto; }
-        .level { margin-bottom: 20px; }
-        .level h2 { margin-bottom: 10px; }
-        .level ul { list-style-type: none; padding: 0; }
-        .level li { padding: 5px; border: 1px solid #ccc; margin-bottom: 5px; }
-    </style>
+    <title>层级数据查看</title>
+    <link rel="stylesheet" href="../static/bootstrap/css/bootstrap.min.css">
 </head>
-<body>
-    <div class="container">
-        <div class="level">
-            <h2>{$level} 层级</h2>
-            <ul>
-                {foreach $data as $item}
-                <li>
-                    <a href="?level={$next_level}&{if isset($item.id)}parent_id={$item.id}{else}parent_name={$item.name}{/if}" target="_blank">
-                        {$item.name} - 余额: {if isset($item.balance)}{$item.balance}{else}{$item.total_balance}{/if}
-                    </a>
-                </li>
-                {/foreach}
-            </ul>
-        </div>
+<body class="bg-light">
+    <div class="container py-4">
+        {switch $level}
+            {case city}
+            <div class="mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">市级层级</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {foreach $data as $item}
+                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
+                            {$item.name}
+                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
+                        </a>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            {/case}
+            
+            {case branch}
+            <div class="mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">支行层级</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {foreach $data as $item}
+                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
+                            {$item.name}
+                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
+                        </a>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            {/case}
+            
+            {case accounting}
+            <div class="mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">核算层级</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {foreach $data as $item}
+                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
+                            {$item.name}
+                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
+                        </a>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            {/case}
+            
+            {case employee}
+            <div class="mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">员工层级</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {foreach $data as $item}
+                        <a href="?level={$next_level}&parent_name={$item.name}&accounting_id={$Request.get.parent_id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            {$item.name}
+                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.balance}</span>
+                        </a>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            {/case}
+            
+            {case company}
+            <div class="mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">公司层级</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {foreach $data as $item}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {$item.name}
+                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.balance}</span>
+                        </div>
+                        {/foreach}
+                    </div>
+                </div>
+            </div>
+            {/case}
+        {/switch}
     </div>
+
+    <script src="../static/jquery/jquery.min.js"></script>
+    <script src="../static/bootstrap/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

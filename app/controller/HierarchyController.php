@@ -13,6 +13,8 @@ class HierarchyController
     {
         $level = $request->get('level', 'city');
         $parentId = $request->get('parent_id', null);
+        $parentName = $request->get('parent_name', null);
+        $accountingId = $request->get('accounting_id', null);
 
         // 调试输出
         dump('Level: ' . $level);
@@ -29,6 +31,9 @@ class HierarchyController
                 break;
             case 'employee':
                 $data = $this->getEmployeeData($parentId);
+                break;
+            case 'company':
+                $data = $this->getCompanyData($parentName, $accountingId);
                 break;
             default:
                 $data = [];
@@ -155,36 +160,83 @@ class HierarchyController
         $levels = [
             'city' => 'branch',
             'branch' => 'accounting',
-            'accounting' => 'employee'
+            'accounting' => 'employee',
+            'employee' => 'company'
         ];
         return $levels[$currentLevel] ?? '';
     }
 
     private function getCompanyData($employeeName, $accountingId)
     {
-        $fields = [];
-        $fieldNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '一十', '一十一', '一十二'];
-        
-        $conditions = [];
-        foreach ($fieldNames as $chineseNumber) {
-            $conditions[] = "营销人名称{$chineseNumber} LIKE :employee_name";
-        }
+        // 调试输出
+        dump('Debug Info:');
+        dump('Employee Name: ' . $employeeName);
+        dump('Accounting ID: ' . $accountingId);
+        dump('Accounting ID Type: ' . gettype($accountingId));
 
+        // 如果没有指定日期，获取最新日期
+        $latestDate = Db::query("SELECT 日期 FROM daily_balance ORDER BY 日期 DESC LIMIT 1")[0]['日期'];
+        dump('Latest Date: ' . $latestDate);
+
+        // 构建查询
         $sql = "SELECT 
-                    customer_info.名称 as name,
-                    daily_balance.账户余额 as balance
-                FROM customer_info
-                INNER JOIN daily_balance ON customer_info.ID = daily_balance.customer_id
-                WHERE (" . implode(' OR ', $conditions) . ")
-                AND customer_info.核算机构编号 = :accounting_id";  // 确保在同一核算机构下
+                    c.客户名称 as name,
+                    SUM(b.账户余额) as balance
+                FROM customer_info c
+                JOIN daily_balance b ON c.ID = b.customer_id
+                WHERE c.核算机构编号 = :accountingId 
+                AND b.日期 = :latestDate
+                AND (
+                    c.营销人名称一 LIKE :employeeName1 OR
+                    c.营销人名称二 LIKE :employeeName2 OR
+                    c.营销人名称三 LIKE :employeeName3 OR
+                    c.营销人名称四 LIKE :employeeName4 OR
+                    c.营销人名称五 LIKE :employeeName5 OR
+                    c.营销人名称六 LIKE :employeeName6 OR
+                    c.营销人名称七 LIKE :employeeName7 OR
+                    c.营销人名称八 LIKE :employeeName8 OR
+                    c.营销人名称九 LIKE :employeeName9 OR
+                    c.营销人名称一十 LIKE :employeeName10 OR
+                    c.营销人名称一十一 LIKE :employeeName11 OR
+                    c.营销人名称一十二 LIKE :employeeName12
+                )
+                GROUP BY c.客户名称";
 
+        // 准备参数
         $params = [
-            'employee_name' => "%{$employeeName}%",
-            'accounting_id' => $accountingId
+            'accountingId' => $accountingId,
+            'latestDate' => $latestDate,
+            'employeeName1' => '%' . $employeeName . '%',
+            'employeeName2' => '%' . $employeeName . '%',
+            'employeeName3' => '%' . $employeeName . '%',
+            'employeeName4' => '%' . $employeeName . '%',
+            'employeeName5' => '%' . $employeeName . '%',
+            'employeeName6' => '%' . $employeeName . '%',
+            'employeeName7' => '%' . $employeeName . '%',
+            'employeeName8' => '%' . $employeeName . '%',
+            'employeeName9' => '%' . $employeeName . '%',
+            'employeeName10' => '%' . $employeeName . '%',
+            'employeeName11' => '%' . $employeeName . '%',
+            'employeeName12' => '%' . $employeeName . '%'
         ];
 
-        $data = Db::query($sql, $params);
+        // 调试输出SQL
+        dump('SQL Query:');
+        dump($sql);
+        dump('Params:');
+        dump($params);
 
-        return $data;
+        // 执行查询
+        try {
+            $result = Db::query($sql, $params);
+            dump('Query Result:');
+            dump($result);
+            return $result;
+        } catch (\Exception $e) {
+            dump('Error:');
+            dump($e->getMessage());
+            dump($e->getTraceAsString());
+            throw $e;
+        }
     }
 } 
