@@ -5,103 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>层级数据查看</title>
     <link rel="stylesheet" href="../static/bootstrap/css/bootstrap.min.css">
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            width: 200px;
+        }
+        .main-content {
+            margin-left: 200px;
+            padding: 20px;
+        }
+        .date-selector {
+            margin-bottom: 20px;
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container py-4">
-        {switch $level}
-            {case city}
-            <div class="mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">市级层级</h5>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        {foreach $data as $item}
-                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
-                            {$item.name}
-                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
-                        </a>
-                        {/foreach}
-                    </div>
+<body>
+    <!-- 左侧导航栏 -->
+    <nav class="sidebar bg-light">
+        <div class="position-sticky">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {if $level=='city'}active{/if}" href="?level=city">市级层级</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {if $level=='branch'}active{/if}" href="?level=branch">支行层级</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {if $level=='accounting'}active{/if}" href="?level=accounting">核算层级</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {if $level=='employee'}active{/if}" href="?level=employee">员工层级</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {if $level=='company'}active{/if}" href="?level=company">公司层级</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="main-content">
+        <!-- 日期选择器 -->
+        <div class="date-selector">
+            <select class="form-select" id="dateSelect" onchange="updateData(this.value)">
+                {foreach $available_dates as $date}
+                <option value="{$date}" {if $current_date==$date}selected{/if}>{$date}</option>
+                {/foreach}
+            </select>
+        </div>
+
+        <!-- 数据展示区域 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="table-header">
+                    <h5 class="mb-0">{$level_names[$level]}</h5>
+                    <span>日期：{$current_date} (单位：万元)</span>
                 </div>
             </div>
-            {/case}
-            
-            {case branch}
-            <div class="mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">支行层级</h5>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        {foreach $data as $item}
-                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
-                            {$item.name}
-                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
-                        </a>
-                        {/foreach}
-                    </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>时点余额</th>
+                                <th>时点比昨日</th>
+                                <th>时点比月初</th>
+                                <th>时点比年初</th>
+                                <th>日均余额</th>
+                                <th>日均比昨日</th>
+                                <th>日均比月初</th>
+                                <th>日均比年初</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {foreach $data as $item}
+                            <tr>
+                                <td>
+                                    {if $level == 'employee'}
+                                    <a href="?level={$next_level}&parent_name={$item.name}&accounting_id={$item.accounting_id}&date={$current_date}">{$item.name}</a>
+                                    {elseif $level != 'company'}
+                                    <a href="?level={$next_level}&parent_id={$item.id}&date={$current_date}">{$item.name}</a>
+                                    {else}
+                                    {$item.name}
+                                    {/if}
+                                </td>
+                                <td>{:number_format($item.balance, 2)}</td>
+                                <td>{:number_format($item.compare_yesterday, 2)}</td>
+                                <td>{:number_format($item.compare_month, 2)}</td>
+                                <td>{:number_format($item.compare_year, 2)}</td>
+                                <td>{:number_format($item.yearly_avg, 2)}</td>
+                                <td>{:number_format($item.yearly_avg_yesterday, 2)}</td>
+                                <td>{:number_format($item.yearly_avg_month, 2)}</td>
+                                <td>{:number_format($item.yearly_avg_year, 2)}</td>
+                            </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            {/case}
-            
-            {case accounting}
-            <div class="mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">核算层级</h5>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        {foreach $data as $item}
-                        <a href="?level={$next_level}&parent_id={$item.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
-                            {$item.name}
-                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.total_balance}</span>
-                        </a>
-                        {/foreach}
-                    </div>
-                </div>
-            </div>
-            {/case}
-            
-            {case employee}
-            <div class="mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">员工层级</h5>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        {foreach $data as $item}
-                        <a href="?level={$next_level}&parent_name={$item.name}&accounting_id={$Request.get.parent_id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" target="_blank">
-                            {$item.name}
-                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.balance}</span>
-                        </a>
-                        {/foreach}
-                    </div>
-                </div>
-            </div>
-            {/case}
-            
-            {case company}
-            <div class="mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">公司层级</h5>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        {foreach $data as $item}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            {$item.name}
-                            <span class="badge bg-success rounded-pill ms-2">余额: {$item.balance}</span>
-                        </div>
-                        {/foreach}
-                    </div>
-                </div>
-            </div>
-            {/case}
-        {/switch}
-    </div>
+        </div>
+    </main>
 
     <script src="../static/jquery/jquery.min.js"></script>
     <script src="../static/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateData(date) {
+            let currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('date', date);
+            window.location.href = currentUrl.toString();
+        }
+    </script>
 </body>
 </html> 
