@@ -115,7 +115,8 @@ class HierarchyController
                 JOIN customer_info ci ON db.customer_id = ci.ID
                 JOIN jigou ON ci.核算机构编号 = jigou.核算机构编号
                 WHERE db.日期 = :date
-                GROUP BY jigou.市行机构号, jigou.市行名称";
+                GROUP BY jigou.市行机构号, jigou.市行名称
+                ORDER BY SUM(db.年日均存款余额) DESC";
 
         return Db::query($sql, ['date' => $date]);
     }
@@ -138,7 +139,8 @@ class HierarchyController
                 INNER JOIN daily_balance db ON ci.ID = db.customer_id
                 WHERE jigou.市行机构号 = :cityId
                 AND db.日期 = :date
-                GROUP BY jigou.支行机构号, jigou.支行名称";
+                GROUP BY jigou.支行机构号, jigou.支行名称
+                ORDER BY SUM(db.年日均存款余额) DESC";
 
         return Db::query($sql, ['cityId' => $cityId, 'date' => $date]);
     }
@@ -161,7 +163,8 @@ class HierarchyController
                 INNER JOIN daily_balance db ON ci.ID = db.customer_id
                 WHERE jigou.支行机构号 = :branchId
                 AND db.日期 = :date
-                GROUP BY jigou.核算机构编号, jigou.核算机构";
+                GROUP BY jigou.核算机构编号, jigou.核算机构
+                ORDER BY SUM(db.年日均存款余额) DESC";
 
         return Db::query($sql, ['branchId' => $branchId, 'date' => $date]);
     }
@@ -227,6 +230,11 @@ class HierarchyController
             }
         }
 
+        // 在返回数据前添加排序
+        usort($mergedData, function($a, $b) {
+            return $b['yearly_avg'] <=> $a['yearly_avg'];
+        });
+
         return array_values($mergedData);
     }
 
@@ -271,7 +279,8 @@ class HierarchyController
                     c.营销人名称一十一 LIKE :employeeName11 OR
                     c.营销人名称一十二 LIKE :employeeName12
                 )
-                GROUP BY c.客户名称";
+                GROUP BY c.客户名称
+                ORDER BY SUM(b.年日均存款余额) DESC";
 
         // 准备参数
         $params = [
