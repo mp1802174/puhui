@@ -21,36 +21,31 @@
             <div class="col-auto bg-white pt-5" style="height: 70vh; width: 220px; border-right: 1px solid #f0f0f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 52px;">
                 <ul class="nav flex-column px-3">
                     <li class="nav-item">
-                        <a class="nav-link rounded-3 my-1 {if $level=='city'}active{/if}" 
-                           style="padding: 8px 16px; color: {if $level=='city'}#ffffff{else}#667eea{/if}; background-color: {if $level=='city'}#667eea{else}transparent{/if}; transition: all 0.2s ease;" 
+                        <a class="nav-link rounded-3 my-1 {if $level=='city'}active bg-primary text-white{else}text-primary{/if}" 
                            href="?level=city">
                             <i class="bi bi-building me-2"></i>市级层级
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link rounded-3 my-1 {if $level=='branch'}active{/if}" 
-                           style="padding: 8px 16px; color: {if $level=='branch'}#ffffff{else}#667eea{/if}; background-color: {if $level=='branch'}#667eea{else}transparent{/if}; transition: all 0.2s ease;" 
+                        <a class="nav-link rounded-3 my-1 {if $level=='branch'}active bg-primary text-white{else}text-primary{/if}" 
                            href="?level=branch">
                             <i class="bi bi-diagram-2 me-2"></i>支行层级
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link rounded-3 my-1 {if $level=='accounting'}active{/if}" 
-                           style="padding: 8px 16px; color: {if $level=='accounting'}#ffffff{else}#667eea{/if}; background-color: {if $level=='accounting'}#667eea{else}transparent{/if}; transition: all 0.2s ease;" 
+                        <a class="nav-link rounded-3 my-1 {if $level=='accounting'}active bg-primary text-white{else}text-primary{/if}" 
                            href="?level=accounting">
                             <i class="bi bi-calculator me-2"></i>核算层级
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link rounded-3 my-1 {if $level=='employee'}active{/if}" 
-                           style="padding: 8px 16px; color: {if $level=='employee'}#ffffff{else}#667eea{/if}; background-color: {if $level=='employee'}#667eea{else}transparent{/if}; transition: all 0.2s ease;" 
+                        <a class="nav-link rounded-3 my-1 {if $level=='employee'}active bg-primary text-white{else}text-primary{/if}" 
                            href="?level=employee">
                             <i class="bi bi-people me-2"></i>员工层级
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link rounded-3 my-1 {if $level=='company'}active{/if}" 
-                           style="padding: 8px 16px; color: {if $level=='company'}#ffffff{else}#667eea{/if}; background-color: {if $level=='company'}#667eea{else}transparent{/if}; transition: all 0.2s ease;" 
+                        <a class="nav-link rounded-3 my-1 {if $level=='company'}active bg-primary text-white{else}text-primary{/if}" 
                            href="?level=company">
                             <i class="bi bi-briefcase me-2"></i>公司层级
                         </a>
