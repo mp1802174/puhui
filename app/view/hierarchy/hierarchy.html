@@ -78,6 +78,41 @@
                     </div>
 
                     <div class="card-body p-0">
+                        <!-- 在表格上方添加验证信息 -->
+                        {if ($level == 'branch' || $level == 'accounting') && $validation}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title">数据验证</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>字段</th>
+                                                <th class="text-end">{if $level == 'branch'}市级数据{else}支行数据{/if}</th>
+                                                <th class="text-end">{if $level == 'branch'}支行合计{else}核算合计{/if}</th>
+                                                <th class="text-end">差额</th>
+                                                <th class="text-end">匹配度</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {foreach $validation.fields as $fieldName => $field}
+                                            {php}
+                                            $parentKey = $level == 'branch' ? 'city' : 'branch';
+                                            {/php}
+                                            <tr>
+                                                <td>{$fieldName}</td>
+                                                <td class="text-end">{$field[$parentKey]|number_format=2}</td>
+                                                <td class="text-end">{$field.current|number_format=2}</td>
+                                                <td class="text-end {$field.difference == 0 ? 'text-success' : 'text-danger'}">{$field.difference|number_format=2}</td>
+                                                <td class="text-end {$field.match_percentage == 100 ? 'text-success' : 'text-danger'}">{$field.match_percentage}%</td>
+                                            </tr>
+                                            {/foreach}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        {/if}
                         <div class="table-responsive">
                             <table class="table align-middle mb-0" style="border: 1px solid #f0f0f0;">
                                 <thead>
@@ -108,7 +143,15 @@
                                                style="color: #667eea; font-weight: 500;" 
                                                target="_blank">{$item.name}</a>
                                             {elseif $level != 'company'}
-                                            <a href="?level={$next_level}&parent_id={$item.id}&date={$current_date}" 
+                                            <a href="?level=accounting&parent_id={$item.id}&date={$current_date}
+&branch_balance={$item.balance}
+&branch_compare_yesterday={$item.compare_yesterday}
+&branch_compare_month={$item.compare_month}
+&branch_compare_year={$item.compare_year}
+&branch_yearly_avg={$item.yearly_avg}
+&branch_yearly_avg_yesterday={$item.yearly_avg_yesterday}
+&branch_yearly_avg_month={$item.yearly_avg_month}
+&branch_yearly_avg_year={$item.yearly_avg_year}" 
                                                class="text-decoration-none" 
                                                style="color: #667eea; font-weight: 500;" 
                                                target="_blank">{$item.name}</a>

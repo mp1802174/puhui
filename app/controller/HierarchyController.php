@@ -62,13 +62,104 @@ class HierarchyController
         // 转换金额为万元
         $data = $this->convertToTenThousand($data);
 
+        // 添加验证数据
+        $validation = null;
+        if (($level === 'branch' && $parentId) || ($level === 'accounting' && $parentId)) {
+            $prefix = $level === 'branch' ? 'city' : 'branch';
+            
+            // 从URL获取上级数据
+            $parentData = [
+                'balance' => $request->get($prefix . '_balance', 0),
+                'compare_yesterday' => $request->get($prefix . '_compare_yesterday', 0),
+                'compare_month' => $request->get($prefix . '_compare_month', 0),
+                'compare_year' => $request->get($prefix . '_compare_year', 0),
+                'yearly_avg' => $request->get($prefix . '_yearly_avg', 0),
+                'yearly_avg_yesterday' => $request->get($prefix . '_yearly_avg_yesterday', 0),
+                'yearly_avg_month' => $request->get($prefix . '_yearly_avg_month', 0),
+                'yearly_avg_year' => $request->get($prefix . '_yearly_avg_year', 0)
+            ];
+            
+            // 计算当前层级合计
+            $currentTotal = [
+                'balance' => 0,
+                'compare_yesterday' => 0,
+                'compare_month' => 0,
+                'compare_year' => 0,
+                'yearly_avg' => 0,
+                'yearly_avg_yesterday' => 0,
+                'yearly_avg_month' => 0,
+                'yearly_avg_year' => 0
+            ];
+            
+            foreach ($data as $item) {
+                foreach ($currentTotal as $key => $value) {
+                    $currentTotal[$key] += $item[$key];
+                }
+            }
+            
+            // 计算所有字段的差额和匹配度
+            $validation = [
+                'fields' => [
+                    '时点余额' => [
+                        $prefix => $parentData['balance'],
+                        'current' => $currentTotal['balance'],
+                        'difference' => $parentData['balance'] - $currentTotal['balance'],
+                        'match_percentage' => $parentData['balance'] ? round(($currentTotal['balance'] / $parentData['balance']) * 100, 2) : 0
+                    ],
+                    '时点比昨日' => [
+                        $prefix => $parentData['compare_yesterday'],
+                        'current' => $currentTotal['compare_yesterday'],
+                        'difference' => $parentData['compare_yesterday'] - $currentTotal['compare_yesterday'],
+                        'match_percentage' => $parentData['compare_yesterday'] ? round(($currentTotal['compare_yesterday'] / $parentData['compare_yesterday']) * 100, 2) : 0
+                    ],
+                    '时点比月初' => [
+                        $prefix => $parentData['compare_month'],
+                        'current' => $currentTotal['compare_month'],
+                        'difference' => $parentData['compare_month'] - $currentTotal['compare_month'],
+                        'match_percentage' => $parentData['compare_month'] ? round(($currentTotal['compare_month'] / $parentData['compare_month']) * 100, 2) : 0
+                    ],
+                    '时点比年初' => [
+                        $prefix => $parentData['compare_year'],
+                        'current' => $currentTotal['compare_year'],
+                        'difference' => $parentData['compare_year'] - $currentTotal['compare_year'],
+                        'match_percentage' => $parentData['compare_year'] ? round(($currentTotal['compare_year'] / $parentData['compare_year']) * 100, 2) : 0
+                    ],
+                    '日均余额' => [
+                        $prefix => $parentData['yearly_avg'],
+                        'current' => $currentTotal['yearly_avg'],
+                        'difference' => $parentData['yearly_avg'] - $currentTotal['yearly_avg'],
+                        'match_percentage' => $parentData['yearly_avg'] ? round(($currentTotal['yearly_avg'] / $parentData['yearly_avg']) * 100, 2) : 0
+                    ],
+                    '日均比昨日' => [
+                        $prefix => $parentData['yearly_avg_yesterday'],
+                        'current' => $currentTotal['yearly_avg_yesterday'],
+                        'difference' => $parentData['yearly_avg_yesterday'] - $currentTotal['yearly_avg_yesterday'],
+                        'match_percentage' => $parentData['yearly_avg_yesterday'] ? round(($currentTotal['yearly_avg_yesterday'] / $parentData['yearly_avg_yesterday']) * 100, 2) : 0
+                    ],
+                    '日均比月初' => [
+                        $prefix => $parentData['yearly_avg_month'],
+                        'current' => $currentTotal['yearly_avg_month'],
+                        'difference' => $parentData['yearly_avg_month'] - $currentTotal['yearly_avg_month'],
+                        'match_percentage' => $parentData['yearly_avg_month'] ? round(($currentTotal['yearly_avg_month'] / $parentData['yearly_avg_month']) * 100, 2) : 0
+                    ],
+                    '日均比年初' => [
+                        $prefix => $parentData['yearly_avg_year'],
+                        'current' => $currentTotal['yearly_avg_year'],
+                        'difference' => $parentData['yearly_avg_year'] - $currentTotal['yearly_avg_year'],
+                        'match_percentage' => $parentData['yearly_avg_year'] ? round(($currentTotal['yearly_avg_year'] / $parentData['yearly_avg_year']) * 100, 2) : 0
+                    ]
+                ]
+            ];
+        }
+
         return View::fetch('hierarchy/hierarchy', [
             'data' => $data,
             'level' => $level,
             'next_level' => $this->getNextLevel($level),
             'level_names' => $levelNames,
             'current_date' => $currentDate,
-            'available_dates' => $availableDates
+            'available_dates' => $availableDates,
+            'validation' => $validation
         ]);
     }
 
@@ -97,7 +188,6 @@ class HierarchyController
         return $data;
     }
 
-    // 修改市级数据查询
     private function getCityData($date)
     {
         $sql = "SELECT 
@@ -171,66 +261,72 @@ class HierarchyController
 
     private function getEmployeeData($accountingId, $date)
     {
-        $fields = [];
         $fieldNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '一十', '一十一', '一十二'];
-        
+        $queries = [];
+        $params = [];
+
         foreach ($fieldNames as $index => $chineseNumber) {
             $fieldName = "营销人名称{$chineseNumber}";
-            $fields[] = "SUBSTRING_INDEX(SUBSTRING_INDEX({$fieldName}, ':', 1), '-', -1) as name{$index}";
-            $fields[] = "SUM(db.账户余额 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as balance{$index}";
-            $fields[] = "SUM(db.时点存款比昨日 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as compare_yesterday{$index}";
-            $fields[] = "SUM(db.时点存款比月初 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as compare_month{$index}";
-            $fields[] = "SUM(db.时点存款比年初 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as compare_year{$index}";
-            $fields[] = "SUM(db.年日均存款余额 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as yearly_avg{$index}";
-            $fields[] = "SUM(db.年日均存款比昨日 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as yearly_avg_yesterday{$index}";
-            $fields[] = "SUM(db.年日均存款比月初 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as yearly_avg_month{$index}";
-            $fields[] = "SUM(db.年日均存款比年初 * (SUBSTRING_INDEX({$fieldName}, ':', -1) / 100)) as yearly_avg_year{$index}";
-        }
-
-        $sql = "SELECT " . implode(', ', $fields) . ",
+            $accountingParam = "accountingId" . $index;
+            $dateParam = "date" . $index;
+            
+            $queries[] = "SELECT 
+                SUBSTRING_INDEX(SUBSTRING_INDEX({$fieldName}, '-', -1), ':', 1) as name,
+                CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100 as ratio,
+                SUM(db.账户余额 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as balance,
+                SUM(db.时点存款比昨日 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_yesterday,
+                SUM(db.时点存款比月初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_month,
+                SUM(db.时点存款比年初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_year,
+                SUM(db.年日均存款余额 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg,
+                SUM(db.年日均存款比昨日 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_yesterday,
+                SUM(db.年日均存款比月初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_month,
+                SUM(db.年日均存款比年初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_year,
                 ci.核算机构编号 as accounting_id
                 FROM customer_info ci
                 INNER JOIN daily_balance db ON ci.ID = db.customer_id
-                WHERE ci.核算机构编号 = :accountingId
-                AND db.日期 = :date
-                GROUP BY " . implode(', ', array_map(function($i) { return "name{$i}"; }, array_keys($fieldNames))) . 
-                ", ci.核算机构编号";
-
-        $rawData = Db::query($sql, ['accountingId' => $accountingId, 'date' => $date]);
-
-        // 合并员工数据时保存核算机构编号
-        $mergedData = [];
-        foreach ($rawData as $row) {
-            for ($i = 0; $i < count($fieldNames); $i++) {
-                if (!empty($row["name{$i}"])) {
-                    $name = $row["name{$i}"];
-                    if (!isset($mergedData[$name])) {
-                        $mergedData[$name] = [
-                            'name' => $name,
-                            'accounting_id' => $row['accounting_id'],
-                            'balance' => 0,
-                            'compare_yesterday' => 0,
-                            'compare_month' => 0,
-                            'compare_year' => 0,
-                            'yearly_avg' => 0,
-                            'yearly_avg_yesterday' => 0,
-                            'yearly_avg_month' => 0,
-                            'yearly_avg_year' => 0
-                        ];
-                    }
-                    $mergedData[$name]['balance'] += $row["balance{$i}"];
-                    $mergedData[$name]['compare_yesterday'] += $row["compare_yesterday{$i}"];
-                    $mergedData[$name]['compare_month'] += $row["compare_month{$i}"];
-                    $mergedData[$name]['compare_year'] += $row["compare_year{$i}"];
-                    $mergedData[$name]['yearly_avg'] += $row["yearly_avg{$i}"];
-                    $mergedData[$name]['yearly_avg_yesterday'] += $row["yearly_avg_yesterday{$i}"];
-                    $mergedData[$name]['yearly_avg_month'] += $row["yearly_avg_month{$i}"];
-                    $mergedData[$name]['yearly_avg_year'] += $row["yearly_avg_year{$i}"];
-                }
-            }
+                WHERE ci.核算机构编号 = :{$accountingParam}
+                AND db.日期 = :{$dateParam}
+                AND {$fieldName} IS NOT NULL 
+                AND {$fieldName} != ''
+                GROUP BY name, ratio, ci.核算机构编号
+                HAVING name IS NOT NULL AND name != ''";
+            
+            $params[$accountingParam] = $accountingId;
+            $params[$dateParam] = $date;
         }
 
-        // 在返回数据前添加排序
+        $sql = implode(" UNION ALL ", $queries);
+        $rawData = Db::query($sql, $params);
+
+        // 合并相同员工的数据
+        $mergedData = [];
+        foreach ($rawData as $row) {
+            $name = $row['name'];
+            if (!isset($mergedData[$name])) {
+                $mergedData[$name] = [
+                    'name' => $name,
+                    'accounting_id' => $row['accounting_id'],
+                    'balance' => 0,
+                    'compare_yesterday' => 0,
+                    'compare_month' => 0,
+                    'compare_year' => 0,
+                    'yearly_avg' => 0,
+                    'yearly_avg_yesterday' => 0,
+                    'yearly_avg_month' => 0,
+                    'yearly_avg_year' => 0
+                ];
+            }
+            $mergedData[$name]['balance'] += $row['balance'];
+            $mergedData[$name]['compare_yesterday'] += $row['compare_yesterday'];
+            $mergedData[$name]['compare_month'] += $row['compare_month'];
+            $mergedData[$name]['compare_year'] += $row['compare_year'];
+            $mergedData[$name]['yearly_avg'] += $row['yearly_avg'];
+            $mergedData[$name]['yearly_avg_yesterday'] += $row['yearly_avg_yesterday'];
+            $mergedData[$name]['yearly_avg_month'] += $row['yearly_avg_month'];
+            $mergedData[$name]['yearly_avg_year'] += $row['yearly_avg_year'];
+        }
+
+        // 排序
         usort($mergedData, function($a, $b) {
             return $b['yearly_avg'] <=> $a['yearly_avg'];
         });
@@ -251,54 +347,71 @@ class HierarchyController
 
     private function getCompanyData($employeeName, $accountingId, $date)
     {
+        // 构建12个营销人字段的条件
+        $conditions = [];
+        $params = [
+            'accountingId' => $accountingId,
+            'date' => $date
+        ];
+
+        for ($i = 1; $i <= 12; $i++) {
+            $fieldNum = $i == 10 ? '一十' : ($i == 11 ? '一十一' : ($i == 12 ? '一十二' : $this->numberToChinese($i)));
+            $field = "营销人名称{$fieldNum}";
+            // 修改：检查员工名称匹配且提取相应比例
+            $conditions[] = "CASE 
+                WHEN {$field} LIKE :pattern{$i} 
+                THEN CAST(REPLACE(SUBSTRING_INDEX({$field}, ':', -1), '%', '') AS DECIMAL(10,2))/100 
+                ELSE 0 
+            END";
+            $params["pattern{$i}"] = "%{$employeeName}%";
+        }
+
+        // 合并所有营销人的比例条件
+        $ratioSum = "(" . implode(" + ", $conditions) . ")";
+
         $sql = "SELECT 
                     c.客户名称 as name,
-                    SUM(b.账户余额) as balance,
-                    SUM(b.时点存款比昨日) as compare_yesterday,
-                    SUM(b.时点存款比月初) as compare_month,
-                    SUM(b.时点存款比年初) as compare_year,
-                    SUM(b.年日均存款余额) as yearly_avg,
-                    SUM(b.年日均存款比昨日) as yearly_avg_yesterday,
-                    SUM(b.年日均存款比月初) as yearly_avg_month,
-                    SUM(b.年日均存款比年初) as yearly_avg_year
+                    SUM(b.账户余额 * {$ratioSum}) as balance,
+                    SUM(b.时点存款比昨日 * {$ratioSum}) as compare_yesterday,
+                    SUM(b.时点存款比月初 * {$ratioSum}) as compare_month,
+                    SUM(b.时点存款比年初 * {$ratioSum}) as compare_year,
+                    SUM(b.年日均存款余额 * {$ratioSum}) as yearly_avg,
+                    SUM(b.年日均存款比昨日 * {$ratioSum}) as yearly_avg_yesterday,
+                    SUM(b.年日均存款比月初 * {$ratioSum}) as yearly_avg_month,
+                    SUM(b.年日均存款比年初 * {$ratioSum}) as yearly_avg_year
                 FROM customer_info c
                 JOIN daily_balance b ON c.ID = b.customer_id
                 WHERE c.核算机构编号 = :accountingId 
                 AND b.日期 = :date
                 AND (
-                    c.营销人名称一 LIKE :employeeName1 OR
-                    c.营销人名称二 LIKE :employeeName2 OR
-                    c.营销人名称三 LIKE :employeeName3 OR
-                    c.营销人名称四 LIKE :employeeName4 OR
-                    c.营销人名称五 LIKE :employeeName5 OR
-                    c.营销人名称六 LIKE :employeeName6 OR
-                    c.营销人名称七 LIKE :employeeName7 OR
-                    c.营销人名称八 LIKE :employeeName8 OR
-                    c.营销人名称九 LIKE :employeeName9 OR
-                    c.营销人名称一十 LIKE :employeeName10 OR
-                    c.营销人名称一十一 LIKE :employeeName11 OR
-                    c.营销人名称一十二 LIKE :employeeName12
+                    c.营销人名称一 LIKE :pattern1 OR
+                    c.营销人名称二 LIKE :pattern2 OR
+                    c.营销人名称三 LIKE :pattern3 OR
+                    c.营销人名称四 LIKE :pattern4 OR
+                    c.营销人名称五 LIKE :pattern5 OR
+                    c.营销人名称六 LIKE :pattern6 OR
+                    c.营销人名称七 LIKE :pattern7 OR
+                    c.营销人名称八 LIKE :pattern8 OR
+                    c.营销人名称九 LIKE :pattern9 OR
+                    c.营销人名称一十 LIKE :pattern10 OR
+                    c.营销人名称一十一 LIKE :pattern11 OR
+                    c.营销人名称一十二 LIKE :pattern12
                 )
                 GROUP BY c.客户名称
-                ORDER BY SUM(b.年日均存款余额) DESC";
-
-        // 准备参数
-        $params = [
-            'accountingId' => $accountingId,
-            'date' => $date
-        ];
-        
-        // 添加12个营销人名称的模糊查询参数
-        for ($i = 1; $i <= 12; $i++) {
-            $params['employeeName' . $i] = '%' . $employeeName . '%';
-        }
+                ORDER BY SUM(b.年日均存款余额 * {$ratioSum}) DESC";
 
         try {
             return Db::query($sql, $params);
         } catch (\Exception $e) {
-            // 记录错误日志
             Log::error('getCompanyData查询失败: ' . $e->getMessage());
             return [];
         }
+    }
+
+    // 辅助函数：将数字转换为中文数字
+    private function numberToChinese($num)
+    {
+        $chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        return $chineseNumbers[$num - 1];
     }
 } 
