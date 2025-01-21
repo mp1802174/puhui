@@ -45,7 +45,8 @@ class HierarchyController
                 $data = $this->getAccountingData($parentId, $currentDate);
                 break;
             case 'employee':
-                $data = $this->getEmployeeData($parentId, $currentDate);
+                $employeeName = $request->get('employee_name', '');
+                $data = $this->getEmployeeData($parentId, $currentDate, $employeeName);
                 break;
             case 'company':
                 $data = $this->getCompanyData($parentName, $accountingId, $currentDate);
@@ -64,8 +65,12 @@ class HierarchyController
 
         // 添加验证数据
         $validation = null;
-        if (($level === 'branch' && $parentId) || ($level === 'accounting' && $parentId)) {
-            $prefix = $level === 'branch' ? 'city' : 'branch';
+        if (($level === 'branch' && $parentId) || 
+            ($level === 'accounting' && $parentId) ||
+            ($level === 'employee' && $parentId)) {
+            
+            $prefix = $level === 'branch' ? 'city' : 
+                     ($level === 'accounting' ? 'branch' : 'accounting');
             
             // 从URL获取上级数据
             $parentData = [
@@ -101,54 +106,71 @@ class HierarchyController
             $validation = [
                 'fields' => [
                     '时点余额' => [
-                        $prefix => $parentData['balance'],
-                        'current' => $currentTotal['balance'],
-                        'difference' => $parentData['balance'] - $currentTotal['balance'],
-                        'match_percentage' => $parentData['balance'] ? round(($currentTotal['balance'] / $parentData['balance']) * 100, 2) : 0
+                        $prefix => floatval($parentData['balance']),
+                        'current' => floatval($currentTotal['balance']),
+                        'difference' => floatval($parentData['balance']) - floatval($currentTotal['balance']),
+                        'match_percentage' => floatval($parentData['balance']) ? round((floatval($currentTotal['balance']) / floatval($parentData['balance'])) * 100, 2) : 0
                     ],
                     '时点比昨日' => [
-                        $prefix => $parentData['compare_yesterday'],
-                        'current' => $currentTotal['compare_yesterday'],
-                        'difference' => $parentData['compare_yesterday'] - $currentTotal['compare_yesterday'],
-                        'match_percentage' => $parentData['compare_yesterday'] ? round(($currentTotal['compare_yesterday'] / $parentData['compare_yesterday']) * 100, 2) : 0
+                        $prefix => floatval($parentData['compare_yesterday']),
+                        'current' => floatval($currentTotal['compare_yesterday']),
+                        'difference' => floatval($parentData['compare_yesterday']) - floatval($currentTotal['compare_yesterday']),
+                        'match_percentage' => floatval($parentData['compare_yesterday']) ? round((floatval($currentTotal['compare_yesterday']) / floatval($parentData['compare_yesterday'])) * 100, 2) : 0
                     ],
                     '时点比月初' => [
-                        $prefix => $parentData['compare_month'],
-                        'current' => $currentTotal['compare_month'],
-                        'difference' => $parentData['compare_month'] - $currentTotal['compare_month'],
-                        'match_percentage' => $parentData['compare_month'] ? round(($currentTotal['compare_month'] / $parentData['compare_month']) * 100, 2) : 0
+                        $prefix => floatval($parentData['compare_month']),
+                        'current' => floatval($currentTotal['compare_month']),
+                        'difference' => floatval($parentData['compare_month']) - floatval($currentTotal['compare_month']),
+                        'match_percentage' => floatval($parentData['compare_month']) ? round((floatval($currentTotal['compare_month']) / floatval($parentData['compare_month'])) * 100, 2) : 0
                     ],
                     '时点比年初' => [
-                        $prefix => $parentData['compare_year'],
-                        'current' => $currentTotal['compare_year'],
-                        'difference' => $parentData['compare_year'] - $currentTotal['compare_year'],
-                        'match_percentage' => $parentData['compare_year'] ? round(($currentTotal['compare_year'] / $parentData['compare_year']) * 100, 2) : 0
+                        $prefix => floatval($parentData['compare_year']),
+                        'current' => floatval($currentTotal['compare_year']),
+                        'difference' => floatval($parentData['compare_year']) - floatval($currentTotal['compare_year']),
+                        'match_percentage' => floatval($parentData['compare_year']) ? round((floatval($currentTotal['compare_year']) / floatval($parentData['compare_year'])) * 100, 2) : 0
                     ],
                     '日均余额' => [
-                        $prefix => $parentData['yearly_avg'],
-                        'current' => $currentTotal['yearly_avg'],
-                        'difference' => $parentData['yearly_avg'] - $currentTotal['yearly_avg'],
-                        'match_percentage' => $parentData['yearly_avg'] ? round(($currentTotal['yearly_avg'] / $parentData['yearly_avg']) * 100, 2) : 0
+                        $prefix => floatval($parentData['yearly_avg']),
+                        'current' => floatval($currentTotal['yearly_avg']),
+                        'difference' => floatval($parentData['yearly_avg']) - floatval($currentTotal['yearly_avg']),
+                        'match_percentage' => floatval($parentData['yearly_avg']) ? round((floatval($currentTotal['yearly_avg']) / floatval($parentData['yearly_avg'])) * 100, 2) : 0
                     ],
                     '日均比昨日' => [
-                        $prefix => $parentData['yearly_avg_yesterday'],
-                        'current' => $currentTotal['yearly_avg_yesterday'],
-                        'difference' => $parentData['yearly_avg_yesterday'] - $currentTotal['yearly_avg_yesterday'],
-                        'match_percentage' => $parentData['yearly_avg_yesterday'] ? round(($currentTotal['yearly_avg_yesterday'] / $parentData['yearly_avg_yesterday']) * 100, 2) : 0
+                        $prefix => floatval($parentData['yearly_avg_yesterday']),
+                        'current' => floatval($currentTotal['yearly_avg_yesterday']),
+                        'difference' => floatval($parentData['yearly_avg_yesterday']) - floatval($currentTotal['yearly_avg_yesterday']),
+                        'match_percentage' => floatval($parentData['yearly_avg_yesterday']) ? round((floatval($currentTotal['yearly_avg_yesterday']) / floatval($parentData['yearly_avg_yesterday'])) * 100, 2) : 0
                     ],
                     '日均比月初' => [
-                        $prefix => $parentData['yearly_avg_month'],
-                        'current' => $currentTotal['yearly_avg_month'],
-                        'difference' => $parentData['yearly_avg_month'] - $currentTotal['yearly_avg_month'],
-                        'match_percentage' => $parentData['yearly_avg_month'] ? round(($currentTotal['yearly_avg_month'] / $parentData['yearly_avg_month']) * 100, 2) : 0
+                        $prefix => floatval($parentData['yearly_avg_month']),
+                        'current' => floatval($currentTotal['yearly_avg_month']),
+                        'difference' => floatval($parentData['yearly_avg_month']) - floatval($currentTotal['yearly_avg_month']),
+                        'match_percentage' => floatval($parentData['yearly_avg_month']) ? round((floatval($currentTotal['yearly_avg_month']) / floatval($parentData['yearly_avg_month'])) * 100, 2) : 0
                     ],
                     '日均比年初' => [
-                        $prefix => $parentData['yearly_avg_year'],
-                        'current' => $currentTotal['yearly_avg_year'],
-                        'difference' => $parentData['yearly_avg_year'] - $currentTotal['yearly_avg_year'],
-                        'match_percentage' => $parentData['yearly_avg_year'] ? round(($currentTotal['yearly_avg_year'] / $parentData['yearly_avg_year']) * 100, 2) : 0
+                        $prefix => floatval($parentData['yearly_avg_year']),
+                        'current' => floatval($currentTotal['yearly_avg_year']),
+                        'difference' => floatval($parentData['yearly_avg_year']) - floatval($currentTotal['yearly_avg_year']),
+                        'match_percentage' => floatval($parentData['yearly_avg_year']) ? round((floatval($currentTotal['yearly_avg_year']) / floatval($parentData['yearly_avg_year'])) * 100, 2) : 0
                     ]
                 ]
+            ];
+        }
+
+        if ($level === 'employee') {
+            // 获取该核算机构下无营销人的客户余额总和
+            $noEmployeeTotal = $this->getNoEmployeeTotal($parentId, $currentDate);
+            
+            // 验证数据中添加无营销人的统计
+            $validation['no_employee_stats'] = [
+                'balance' => $noEmployeeTotal['balance'],
+                'compare_yesterday' => $noEmployeeTotal['compare_yesterday'],
+                'compare_month' => $noEmployeeTotal['compare_month'],
+                'compare_year' => $noEmployeeTotal['compare_year'],
+                'yearly_avg' => $noEmployeeTotal['yearly_avg'],
+                'yearly_avg_yesterday' => $noEmployeeTotal['yearly_avg_yesterday'],
+                'yearly_avg_month' => $noEmployeeTotal['yearly_avg_month'],
+                'yearly_avg_year' => $noEmployeeTotal['yearly_avg_year']
             ];
         }
 
@@ -238,100 +260,131 @@ class HierarchyController
     private function getAccountingData($branchId, $date)
     {
         $sql = "SELECT 
-                    jigou.核算机构编号 as id, 
-                    jigou.核算机构 as name,
-                    SUM(db.账户余额) as balance,
-                    SUM(db.时点存款比昨日) as compare_yesterday,
-                    SUM(db.时点存款比月初) as compare_month,
-                    SUM(db.时点存款比年初) as compare_year,
-                    SUM(db.年日均存款余额) as yearly_avg,
-                    SUM(db.年日均存款比昨日) as yearly_avg_yesterday,
-                    SUM(db.年日均存款比月初) as yearly_avg_month,
-                    SUM(db.年日均存款比年初) as yearly_avg_year
-                FROM jigou
-                INNER JOIN customer_info ci ON jigou.核算机构编号 = ci.核算机构编号
-                INNER JOIN daily_balance db ON ci.ID = db.customer_id
-                WHERE jigou.支行机构号 = :branchId
-                AND db.日期 = :date
-                GROUP BY jigou.核算机构编号, jigou.核算机构
-                ORDER BY SUM(db.年日均存款余额) DESC";
+            jigou.核算机构编号 as id, 
+            jigou.核算机构 as name,
+            SUM(db.账户余额) as balance,
+            SUM(db.时点存款比昨日) as compare_yesterday,
+            SUM(db.时点存款比月初) as compare_month,
+            SUM(db.时点存款比年初) as compare_year,
+            SUM(db.年日均存款余额) as yearly_avg,
+            SUM(db.年日均存款比昨日) as yearly_avg_yesterday,
+            SUM(db.年日均存款比月初) as yearly_avg_month,
+            SUM(db.年日均存款比年初) as yearly_avg_year
+        FROM jigou
+        INNER JOIN customer_info ci ON jigou.核算机构编号 = ci.核算机构编号
+        INNER JOIN daily_balance db ON ci.ID = db.customer_id
+        WHERE jigou.支行机构号 = :branchId
+        AND TRIM(db.日期) = :date
+        GROUP BY jigou.核算机构编号, jigou.核算机构
+        ORDER BY SUM(db.年日均存款余额) DESC";
 
-        return Db::query($sql, ['branchId' => $branchId, 'date' => $date]);
+        return Db::query($sql, [
+            'branchId' => $branchId,
+            'date' => trim($date)
+        ]);
     }
 
-    private function getEmployeeData($accountingId, $date)
+    private function getEmployeeData($accountingId, $date, $employeeName)
     {
-        $fieldNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '一十', '一十一', '一十二'];
-        $queries = [];
-        $params = [];
-
-        foreach ($fieldNames as $index => $chineseNumber) {
-            $fieldName = "营销人名称{$chineseNumber}";
-            $accountingParam = "accountingId" . $index;
-            $dateParam = "date" . $index;
+        // 生成12个营销人的SQL
+        $unionSqls = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $marketingNameField = '营销人名称' . $this->getNumberMap($i);
             
-            $queries[] = "SELECT 
-                SUBSTRING_INDEX(SUBSTRING_INDEX({$fieldName}, '-', -1), ':', 1) as name,
-                CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100 as ratio,
-                SUM(db.账户余额 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as balance,
-                SUM(db.时点存款比昨日 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_yesterday,
-                SUM(db.时点存款比月初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_month,
-                SUM(db.时点存款比年初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as compare_year,
-                SUM(db.年日均存款余额 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg,
-                SUM(db.年日均存款比昨日 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_yesterday,
-                SUM(db.年日均存款比月初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_month,
-                SUM(db.年日均存款比年初 * (CAST(REPLACE(SUBSTRING_INDEX({$fieldName}, ':', -1), '%', '') AS DECIMAL(10,2))/100)) as yearly_avg_year,
-                ci.核算机构编号 as accounting_id
-                FROM customer_info ci
-                INNER JOIN daily_balance db ON ci.ID = db.customer_id
-                WHERE ci.核算机构编号 = :{$accountingParam}
-                AND db.日期 = :{$dateParam}
-                AND {$fieldName} IS NOT NULL 
-                AND {$fieldName} != ''
-                GROUP BY name, ratio, ci.核算机构编号
-                HAVING name IS NOT NULL AND name != ''";
-            
-            $params[$accountingParam] = $accountingId;
-            $params[$dateParam] = $date;
+            $unionSqls[] = "
+            SELECT 
+                SUBSTRING_INDEX(ci.{$marketingNameField}, ':', 1) as id,
+                SUBSTRING_INDEX(ci.{$marketingNameField}, ':', 1) as name,
+                SUBSTRING_INDEX(ci.{$marketingNameField}, ':', 1) as employee_no,
+                COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)), 0)/100 as rate,
+                COALESCE(CAST(NULLIF(TRIM(db.账户余额), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as balance,
+                COALESCE(CAST(NULLIF(TRIM(db.时点存款比昨日), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as compare_yesterday,
+                COALESCE(CAST(NULLIF(TRIM(db.时点存款比月初), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as compare_month,
+                COALESCE(CAST(NULLIF(TRIM(db.时点存款比年初), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as compare_year,
+                COALESCE(CAST(NULLIF(TRIM(db.年日均存款余额), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as yearly_avg,
+                COALESCE(CAST(NULLIF(TRIM(db.年日均存款比昨日), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as yearly_avg_yesterday,
+                COALESCE(CAST(NULLIF(TRIM(db.年日均存款比月初), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as yearly_avg_month,
+                COALESCE(CAST(NULLIF(TRIM(db.年日均存款比年初), '') AS DECIMAL(18,2)), 0) * 
+                    (COALESCE(CAST(REPLACE(SUBSTRING_INDEX(ci.{$marketingNameField}, ':', -1), '%', '') AS DECIMAL(18,4)),0)/100) as yearly_avg_year
+            FROM customer_info ci
+            JOIN daily_balance db ON ci.ID = db.customer_id 
+            WHERE ci.核算机构编号 = :accountingId
+            AND TRIM(db.日期) = TRIM(:date)
+            AND ci.{$marketingNameField} IS NOT NULL 
+            AND ci.{$marketingNameField} != ''
+            AND SUBSTRING_INDEX(ci.{$marketingNameField}, ':', 1) LIKE :employeeName";
         }
 
-        $sql = implode(" UNION ALL ", $queries);
-        $rawData = Db::query($sql, $params);
+        $sql = "SELECT 
+            id,
+            name,
+            employee_no,
+            CAST(SUM(balance) AS DECIMAL(18,2)) as balance,
+            CAST(SUM(compare_yesterday) AS DECIMAL(18,2)) as compare_yesterday,
+            CAST(SUM(compare_month) AS DECIMAL(18,2)) as compare_month,
+            CAST(SUM(compare_year) AS DECIMAL(18,2)) as compare_year,
+            CAST(SUM(yearly_avg) AS DECIMAL(18,2)) as yearly_avg,
+            CAST(SUM(yearly_avg_yesterday) AS DECIMAL(18,2)) as yearly_avg_yesterday,
+            CAST(SUM(yearly_avg_month) AS DECIMAL(18,2)) as yearly_avg_month,
+            CAST(SUM(yearly_avg_year) AS DECIMAL(18,2)) as yearly_avg_year
+        FROM (" . implode(" UNION ALL ", $unionSqls) . ") as employee_balance
+        GROUP BY id, name, employee_no
+        ORDER BY yearly_avg DESC";
 
-        // 合并相同员工的数据
-        $mergedData = [];
-        foreach ($rawData as $row) {
-            $name = $row['name'];
-            if (!isset($mergedData[$name])) {
-                $mergedData[$name] = [
-                    'name' => $name,
-                    'accounting_id' => $row['accounting_id'],
-                    'balance' => 0,
-                    'compare_yesterday' => 0,
-                    'compare_month' => 0,
-                    'compare_year' => 0,
-                    'yearly_avg' => 0,
-                    'yearly_avg_yesterday' => 0,
-                    'yearly_avg_month' => 0,
-                    'yearly_avg_year' => 0
-                ];
-            }
-            $mergedData[$name]['balance'] += $row['balance'];
-            $mergedData[$name]['compare_yesterday'] += $row['compare_yesterday'];
-            $mergedData[$name]['compare_month'] += $row['compare_month'];
-            $mergedData[$name]['compare_year'] += $row['compare_year'];
-            $mergedData[$name]['yearly_avg'] += $row['yearly_avg'];
-            $mergedData[$name]['yearly_avg_yesterday'] += $row['yearly_avg_yesterday'];
-            $mergedData[$name]['yearly_avg_month'] += $row['yearly_avg_month'];
-            $mergedData[$name]['yearly_avg_year'] += $row['yearly_avg_year'];
+        try {
+            // 确保日期参数被正确处理
+            $params = [
+                'accountingId' => $accountingId,
+                'date' => trim($date),
+                'employeeName' => "%{$employeeName}%"
+            ];
+            
+            // 添加详细的SQL调试信息
+            Log::info('完整SQL:', [
+                'sql' => $sql,
+                'unionSqls数量' => count($unionSqls),
+                'params' => $params,
+                'firstUnionSql' => $unionSqls[0] ?? 'empty',  // 查看第一个子查询
+                'lastUnionSql' => end($unionSqls) ?? 'empty'   // 查看最后一个子查询
+            ]);
+            
+            $result = Db::query($sql, $params);
+            
+            // 添加结果日志
+            Log::info('Query Result:', ['count' => count($result)]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('getEmployeeData查询失败: ' . $e->getMessage());
+            Log::error('SQL: ' . $sql);
+            Log::error('Parameters: ' . json_encode($params));
+            return [];
         }
+    }
 
-        // 排序
-        usort($mergedData, function($a, $b) {
-            return $b['yearly_avg'] <=> $a['yearly_avg'];
-        });
-
-        return array_values($mergedData);
+    /**
+     * 获取数字映射（包括十一、十二的特殊处理）
+     */
+    private function getNumberMap($number)
+    {
+        if ($number <= 10) {
+            $numberMap = [
+                1 => '一', 2 => '二', 3 => '三', 4 => '四', 5 => '五', 
+                6 => '六', 7 => '七', 8 => '八', 9 => '九', 10 => '一十'
+            ];
+            return $numberMap[$number];
+        } else if ($number == 11) {
+            return '一十一';
+        } else if ($number == 12) {
+            return '一十二';
+        }
     }
 
     private function getNextLevel($currentLevel)
@@ -413,5 +466,66 @@ class HierarchyController
     {
         $chineseNumbers = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
         return $chineseNumbers[$num - 1];
+    }
+
+    /**
+     * 获取无营销人客户的余额统计
+     */
+    private function getNoEmployeeTotal($accountingId, $date)
+    {
+        $sql = "SELECT 
+            SUM(db.账户余额) as balance,
+            SUM(db.时点存款比昨日) as compare_yesterday,
+            SUM(db.时点存款比月初) as compare_month,
+            SUM(db.时点存款比年初) as compare_year,
+            SUM(db.年日均存款余额) as yearly_avg,
+            SUM(db.年日均存款比昨日) as yearly_avg_yesterday,
+            SUM(db.年日均存款比月初) as yearly_avg_month,
+            SUM(db.年日均存款比年初) as yearly_avg_year
+        FROM daily_balance db
+        JOIN customer_info ci ON db.customer_id = ci.ID
+        WHERE ci.核算机构编号 = :accountingId
+        AND db.日期 = :date
+        AND (
+            ci.营销人一 IS NULL OR ci.营销人一 = ''
+        ) AND (
+            ci.营销人二 IS NULL OR ci.营销人二 = ''
+        ) AND (
+            ci.营销人三 IS NULL OR ci.营销人三 = ''
+        ) AND (
+            ci.营销人四 IS NULL OR ci.营销人四 = ''
+        ) AND (
+            ci.营销人五 IS NULL OR ci.营销人五 = ''
+        ) AND (
+            ci.营销人六 IS NULL OR ci.营销人六 = ''
+        ) AND (
+            ci.营销人七 IS NULL OR ci.营销人七 = ''
+        ) AND (
+            ci.营销人八 IS NULL OR ci.营销人八 = ''
+        ) AND (
+            ci.营销人九 IS NULL OR ci.营销人九 = ''
+        ) AND (
+            ci.营销人一十 IS NULL OR ci.营销人一十 = ''
+        ) AND (
+            ci.营销人一十一 IS NULL OR ci.营销人一十一 = ''
+        ) AND (
+            ci.营销人一十二 IS NULL OR ci.营销人一十二 = ''
+        )";
+
+        $result = Db::query($sql, [
+            'accountingId' => $accountingId,
+            'date' => $date
+        ]);
+
+        return $result[0] ?? [
+            'balance' => 0,
+            'compare_yesterday' => 0,
+            'compare_month' => 0,
+            'compare_year' => 0,
+            'yearly_avg' => 0,
+            'yearly_avg_yesterday' => 0,
+            'yearly_avg_month' => 0,
+            'yearly_avg_year' => 0
+        ];
     }
 } 

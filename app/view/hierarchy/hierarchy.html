@@ -79,17 +79,35 @@
 
                     <div class="card-body p-0">
                         <!-- 在表格上方添加验证信息 -->
-                        {if ($level == 'branch' || $level == 'accounting') && $validation}
+                        {if ($level == 'branch' || $level == 'accounting' || $level == 'employee') && $validation}
                         <div class="card mb-4">
                             <div class="card-body">
                                 <h6 class="card-title">数据验证</h6>
+                                {if $level == 'employee'}
+                                <div class="alert alert-info mb-3">
+                                    <small>
+                                        注意：员工层级只统计有营销人的客户数据，因此合计数据会小于核算层级。
+                                        <br>当前核算机构下共有未分配营销人的余额：{$validation.no_employee_stats.balance|number_format=2}万元
+                                    </small>
+                                </div>
+                                {/if}
                                 <div class="table-responsive">
                                     <table class="table table-sm">
                                         <thead>
                                             <tr>
                                                 <th>字段</th>
-                                                <th class="text-end">{if $level == 'branch'}市级数据{else}支行数据{/if}</th>
-                                                <th class="text-end">{if $level == 'branch'}支行合计{else}核算合计{/if}</th>
+                                                <th class="text-end">
+                                                    {if $level == 'branch'}市级数据
+                                                    {elseif $level == 'accounting'}支行数据
+                                                    {else}核算数据
+                                                    {/if}
+                                                </th>
+                                                <th class="text-end">
+                                                    {if $level == 'branch'}支行合计
+                                                    {elseif $level == 'accounting'}核算合计
+                                                    {else}员工合计
+                                                    {/if}
+                                                </th>
                                                 <th class="text-end">差额</th>
                                                 <th class="text-end">匹配度</th>
                                             </tr>
@@ -97,7 +115,8 @@
                                         <tbody>
                                             {foreach $validation.fields as $fieldName => $field}
                                             {php}
-                                            $parentKey = $level == 'branch' ? 'city' : 'branch';
+                                            $parentKey = $level == 'branch' ? 'city' : 
+                                                       ($level == 'accounting' ? 'branch' : 'accounting');
                                             {/php}
                                             <tr>
                                                 <td>{$fieldName}</td>
@@ -137,26 +156,56 @@
                                     {foreach $data as $item}
                                     <tr style="border-bottom: 1px solid #f0f0f0; transition: all 0.2s ease;">
                                         <td class="ps-4" style="padding: 12px;">
-                                            {if $level == 'employee'}
-                                            <a href="?level={$next_level}&parent_name={$item.name}&accounting_id={$item.accounting_id}&date={$current_date}" 
-                                               class="text-decoration-none" 
-                                               style="color: #667eea; font-weight: 500;" 
-                                               target="_blank">{$item.name}</a>
-                                            {elseif $level != 'company'}
-                                            <a href="?level=accounting&parent_id={$item.id}&date={$current_date}
-&branch_balance={$item.balance}
-&branch_compare_yesterday={$item.compare_yesterday}
-&branch_compare_month={$item.compare_month}
-&branch_compare_year={$item.compare_year}
-&branch_yearly_avg={$item.yearly_avg}
-&branch_yearly_avg_yesterday={$item.yearly_avg_yesterday}
-&branch_yearly_avg_month={$item.yearly_avg_month}
-&branch_yearly_avg_year={$item.yearly_avg_year}" 
-                                               class="text-decoration-none" 
-                                               style="color: #667eea; font-weight: 500;" 
-                                               target="_blank">{$item.name}</a>
+                                            {if $level == 'city' && isset($item['id'])}
+                                                <a href="?level=branch&parent_id={$item.id}&date={$current_date}
+                                                &city_balance={$item.balance}
+                                                &city_compare_yesterday={$item.compare_yesterday}
+                                                &city_compare_month={$item.compare_month}
+                                                &city_compare_year={$item.compare_year}
+                                                &city_yearly_avg={$item.yearly_avg}
+                                                &city_yearly_avg_yesterday={$item.yearly_avg_yesterday}
+                                                &city_yearly_avg_month={$item.yearly_avg_month}
+                                                &city_yearly_avg_year={$item.yearly_avg_year}">
+                                                {$item.name}
+                                                </a>
+                                            {elseif $level == 'branch' && isset($item['id'])}
+                                                <a href="?level=accounting&parent_id={$item.id}&date={$current_date}
+                                                &branch_balance={$item.balance}
+                                                &branch_compare_yesterday={$item.compare_yesterday}
+                                                &branch_compare_month={$item.compare_month}
+                                                &branch_compare_year={$item.compare_year}
+                                                &branch_yearly_avg={$item.yearly_avg}
+                                                &branch_yearly_avg_yesterday={$item.yearly_avg_yesterday}
+                                                &branch_yearly_avg_month={$item.yearly_avg_month}
+                                                &branch_yearly_avg_year={$item.yearly_avg_year}">
+                                                {$item.name}
+                                                </a>
+                                            {elseif $level == 'accounting' && isset($item['id'])}
+                                                <a href="?level=employee&parent_id={$item.id}&date={$current_date}
+                                                &accounting_balance={$item.balance}
+                                                &accounting_compare_yesterday={$item.compare_yesterday}
+                                                &accounting_compare_month={$item.compare_month}
+                                                &accounting_compare_year={$item.compare_year}
+                                                &accounting_yearly_avg={$item.yearly_avg}
+                                                &accounting_yearly_avg_yesterday={$item.yearly_avg_yesterday}
+                                                &accounting_yearly_avg_month={$item.yearly_avg_month}
+                                                &accounting_yearly_avg_year={$item.yearly_avg_year}">
+                                                {$item.name}
+                                                </a>
+                                            {elseif $level == 'employee' && isset($item['id'])}
+                                                <a href="?level=company&parent_id={$item.id}&date={$current_date}
+                                                &employee_balance={$item.balance}
+                                                &employee_compare_yesterday={$item.compare_yesterday}
+                                                &employee_compare_month={$item.compare_month}
+                                                &employee_compare_year={$item.compare_year}
+                                                &employee_yearly_avg={$item.yearly_avg}
+                                                &employee_yearly_avg_yesterday={$item.yearly_avg_yesterday}
+                                                &employee_yearly_avg_month={$item.yearly_avg_month}
+                                                &employee_yearly_avg_year={$item.yearly_avg_year}">
+                                                {$item.name}
+                                                </a>
                                             {else}
-                                            <span style="color: #2c3e50;">{$item.name}</span>
+                                                {$item.name|default=''}
                                             {/if}
                                         </td>
                                         <td class="text-end fw-semibold" style="padding: 12px; color: #667eea;">{:number_format($item.yearly_avg, 2)}</td>
