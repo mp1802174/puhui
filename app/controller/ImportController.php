@@ -122,7 +122,7 @@ class ImportController
             Log::info("余额信息导入完成: {$balanceCount} 条记录");
             
             // 3. 清空原始数据表
-            $pdo->exec("INSERT INTO daily_record_bak SELECT *, NOW() as created_at FROM daily_record");
+            $pdo->exec("INSERT INTO daily_record_bak SELECT * FROM daily_record");
             $pdo->exec("TRUNCATE TABLE daily_record");
             Log::info("清空原始数据表 daily_record");
             
@@ -533,6 +533,7 @@ class ImportController
     public function allocation()
     {
         try {
+            Log::info("=== 开始分配营销人 ===");
             $pdo = $this->getPDO();
             $pdo->beginTransaction();
 
@@ -548,6 +549,7 @@ class ImportController
                 ON DUPLICATE KEY UPDATE 
                 marketer_name = VALUES(marketer_name),
                 marketer_ratio = VALUES(marketer_ratio),
+                marketer_index = VALUES(marketer_index),
                 remark = VALUES(remark)");
 
             $insertCount = 0;
@@ -601,22 +603,16 @@ class ImportController
             }
 
             $pdo->commit();
+            Log::info("营销人分配完成，新增：{$insertCount}，更新：{$updateCount}");
 
-            // 返回处理结果
             return json([
                 'code' => 1,
                 'msg' => "处理完成，新增 {$insertCount} 条记录，更新 {$updateCount} 条记录"
             ]);
 
         } catch (\Exception $e) {
-            if (isset($pdo)) {
-                $pdo->rollBack();
-            }
-            Log::error("分配处理失败: " . $e->getMessage());
-            return json([
-                'code' => 0,
-                'msg' => '处理失败：' . $e->getMessage()
-            ]);
+            Log::error("营销人分配失败：" . $e->getMessage());
+            throw $e;
         }
     }
 
