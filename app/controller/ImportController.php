@@ -529,4 +529,105 @@ class ImportController
             ]);
         }
     }
+
+    public function allocation()
+    {
+        try {
+            $pdo = $this->getPDO();
+            $pdo->beginTransaction();
+
+            // 获取所有customer_info记录
+            $customers = $pdo->query("SELECT id, 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五, 
+                营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十, 营销人名称一十一, 营销人名称一十二 
+                FROM customer_info")->fetchAll(PDO::FETCH_ASSOC);
+
+            // 准备UPSERT语句
+            $upsertStmt = $pdo->prepare("INSERT INTO customer_marketer 
+                (customer_id, marketer_name, marketer_ratio, marketer_index, remark) 
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                marketer_name = VALUES(marketer_name),
+                marketer_ratio = VALUES(marketer_ratio),
+                remark = VALUES(remark)");
+
+            $insertCount = 0;
+            $updateCount = 0;
+
+            foreach ($customers as $customer) {
+                $totalRatio = 0;
+                $customerMarketers = [];
+
+                // 处理12个营销人字段
+                for ($i = 1; $i <= 12; $i++) {
+                    $fieldName = $i <= 9 ? "营销人名称{$i}" : ($i == 10 ? "营销人名称一十" : "营销人名称一十" . ($i - 10));
+                    $value = $customer[$fieldName];
+
+                    if (!empty($value)) {
+                        // 使用正则表达式提取姓名和比例
+                        if (preg_match('/-([^:]+):(\d+)%/', $value, $matches)) {
+                            $name = trim($matches[1]);
+                            $ratio = floatval($matches[2]);
+                            $totalRatio += $ratio;
+                            
+                            $customerMarketers[] = [
+                                'name' => $name,
+                                'ratio' => $ratio / 100, // 转换为小数
+                                'index' => $i
+                            ];
+                        }
+                    }
+                }
+
+                // 更新或插入记录
+                foreach ($customerMarketers as $marketer) {
+                    $result = $upsertStmt->execute([
+                        $customer['id'],
+                        $marketer['name'],
+                        $marketer['ratio'],
+                        $marketer['index'],
+                        "总分配比例: {$totalRatio}%"
+                    ]);
+
+                    // 根据受影响行数判断是插入还是更新
+                    if ($result) {
+                        $rowCount = $upsertStmt->rowCount();
+                        if ($rowCount == 1) {
+                            $insertCount++;
+                        } else if ($rowCount == 2) {
+                            $updateCount++;
+                        }
+                    }
+                }
+            }
+
+            $pdo->commit();
+
+            // 返回处理结果
+            return json([
+                'code' => 1,
+                'msg' => "处理完成，新增 {$insertCount} 条记录，更新 {$updateCount} 条记录"
+            ]);
+
+        } catch (\Exception $e) {
+            if (isset($pdo)) {
+                $pdo->rollBack();
+            }
+            Log::error("分配处理失败: " . $e->getMessage());
+            return json([
+                'code' => 0,
+                'msg' => '处理失败：' . $e->getMessage()
+            ]);
+        }
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
