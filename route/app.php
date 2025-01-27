@@ -26,6 +26,9 @@ Route::get('hello/:name', 'index/hello');
 Route::get('import/data', 'ImportController/importData');
 Route::get('import/check', 'ImportController/checkCustomerCount');
 
+// 新增分配路由
+Route::get('import/allocation', 'ImportController/allocation');
+
 // 每日记录路由
 Route::get('daily_record/index', 'DailyRecord/index');
 Route::post('daily_record/import', 'DailyRecord/import');

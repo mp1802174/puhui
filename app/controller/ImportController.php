@@ -537,19 +537,24 @@ class ImportController
             $pdo = $this->getPDO();
             $pdo->beginTransaction();
 
-            // 获取所有customer_info记录
-            $customers = $pdo->query("SELECT id, 营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五, 
-                营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十, 营销人名称一十一, 营销人名称一十二 
-                FROM customer_info")->fetchAll(PDO::FETCH_ASSOC);
+            // 获取所有customer_info记录（建议后续改为分页处理）
+            $customers = $pdo->query("SELECT id, 
+                营销人名称一, 营销人名称二, 营销人名称三, 营销人名称四, 营销人名称五, 
+                营销人名称六, 营销人名称七, 营销人名称八, 营销人名称九, 营销人名称一十, 
+                营销人名称一十一, 营销人名称一十二 
+                FROM customer_info")->fetchAll(\PDO::FETCH_ASSOC);
 
-            // 准备UPSERT语句
+            // 修改预加载查询（增加marketer_index作为组合键）
+            $existingData = $pdo->query("SELECT CONCAT(customer_id,'-',marketer_index) as unique_key, marketer_ratio, remark 
+                                       FROM customer_marketer")
+                                ->fetchAll(\PDO::FETCH_UNIQUE);
+
+            // 准备UPSERT语句（保持全量更新但优化索引）
             $upsertStmt = $pdo->prepare("INSERT INTO customer_marketer 
                 (customer_id, marketer_name, marketer_ratio, marketer_index, remark) 
                 VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
-                marketer_name = VALUES(marketer_name),
                 marketer_ratio = VALUES(marketer_ratio),
-                marketer_index = VALUES(marketer_index),
                 remark = VALUES(remark)");
 
             $insertCount = 0;
@@ -561,16 +566,32 @@ class ImportController
 
                 // 处理12个营销人字段
                 for ($i = 1; $i <= 12; $i++) {
-                    $fieldName = $i <= 9 ? "营销人名称{$i}" : ($i == 10 ? "营销人名称一十" : "营销人名称一十" . ($i - 10));
-                    $value = $customer[$fieldName];
+                    // 修正字段名生成逻辑
+                    $fieldName = match($i) {
+                        1 => '营销人名称一',
+                        2 => '营销人名称二',
+                        3 => '营销人名称三',
+                        4 => '营销人名称四',
+                        5 => '营销人名称五',
+                        6 => '营销人名称六',
+                        7 => '营销人名称七',
+                        8 => '营销人名称八',
+                        9 => '营销人名称九',
+                        10 => '营销人名称一十',
+                        11 => '营销人名称一十一',
+                        12 => '营销人名称一十二',
+                        default => ''
+                    };
+
+                    $value = $customer[$fieldName] ?? '';
 
                     if (!empty($value)) {
-                        // 使用正则表达式提取姓名和比例
-                        if (preg_match('/-([^:]+):(\d+)%/', $value, $matches)) {
+                        // 增强正则匹配（支持中文冒号、空格等）
+                        if (preg_match('/-([\p{Han}a-zA-Z\s]+)[:：](\d+)%?/u', $value, $matches)) {
                             $name = trim($matches[1]);
                             $ratio = floatval($matches[2]);
                             $totalRatio += $ratio;
-                            
+
                             $customerMarketers[] = [
                                 'name' => $name,
                                 'ratio' => $ratio / 100, // 转换为小数
@@ -580,22 +601,34 @@ class ImportController
                     }
                 }
 
+                // 修改后的比例验证逻辑
+                $baseRemark = "总分配比例: {$totalRatio}%";
+                if ($totalRatio != 100) {
+                    $ratioRemark = $baseRemark . "（比例异常）";
+                    Log::warning("客户ID {$customer['id']} 营销人比例异常：当前总比例 {$totalRatio}%");
+                } else {
+                    $ratioRemark = $baseRemark;
+                }
+
                 // 更新或插入记录
                 foreach ($customerMarketers as $marketer) {
+                    $uniqueKey = $customer['id'] . '-' . $marketer['index'];
+                    $oldRatio = $existingData[$uniqueKey]['marketer_ratio'] ?? null;
+                    $oldRemark = $existingData[$uniqueKey]['remark'] ?? null;
+
                     $result = $upsertStmt->execute([
                         $customer['id'],
                         $marketer['name'],
                         $marketer['ratio'],
                         $marketer['index'],
-                        "总分配比例: {$totalRatio}%"
+                        $ratioRemark  // 动态备注内容
                     ]);
-
-                    // 根据受影响行数判断是插入还是更新
-                    if ($result) {
-                        $rowCount = $upsertStmt->rowCount();
-                        if ($rowCount == 1) {
-                            $insertCount++;
-                        } else if ($rowCount == 2) {
+                    
+                    $rowCount = $upsertStmt->rowCount();
+                    if ($rowCount === 1) {
+                        $insertCount++;
+                    } elseif ($rowCount > 0) { // 处理可能返回1或2的情况
+                        if ($marketer['ratio'] != $oldRatio || $ratioRemark != $oldRemark) {
                             $updateCount++;
                         }
                     }
@@ -605,14 +638,20 @@ class ImportController
             $pdo->commit();
             Log::info("营销人分配完成，新增：{$insertCount}，更新：{$updateCount}");
 
-            return json([
-                'code' => 1,
-                'msg' => "处理完成，新增 {$insertCount} 条记录，更新 {$updateCount} 条记录"
-            ]);
+            return "<script>
+                alert('营销人分配完成！\\n新增记录：{$insertCount}条\\n更新记录：{$updateCount}条');
+                window.location.href = '/daily_record/index';
+            </script>";
 
         } catch (\Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             Log::error("营销人分配失败：" . $e->getMessage());
-            throw $e;
+            return "<script>
+                alert('分配失败：" . addslashes(str_replace(["\r","\n"], '', $e->getMessage())) . "');
+                window.location.href = '/daily_record/index';
+            </script>";
         }
     }
 
