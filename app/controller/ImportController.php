@@ -544,17 +544,27 @@ class ImportController
                 营销人名称一十一, 营销人名称一十二 
                 FROM customer_info")->fetchAll(\PDO::FETCH_ASSOC);
 
-            // 修改预加载查询（增加marketer_index作为组合键）
-            $existingData = $pdo->query("SELECT CONCAT(customer_id,'-',marketer_index) as unique_key, marketer_ratio, remark 
+            // 修改预加载查询（正确获取二维数组结构）
+            $existingData = $pdo->query("SELECT customer_id, marketer_index, marketer_ratio, remark 
                                        FROM customer_marketer")
-                                ->fetchAll(\PDO::FETCH_UNIQUE);
+                                ->fetchAll(\PDO::FETCH_GROUP | \PDO::FETCH_UNIQUE);
 
-            // 准备UPSERT语句（保持全量更新但优化索引）
+            // 或者更明确的处理方式：
+            $existingData = [];
+            $rawData = $pdo->query("SELECT customer_id, marketer_index, marketer_ratio, remark 
+                                  FROM customer_marketer")
+                         ->fetchAll(\PDO::FETCH_ASSOC);
+                         
+            foreach ($rawData as $row) {
+                $existingData[$row['customer_id']][$row['marketer_index']] = $row;
+            }
+
+            // 优化UPSERT语句（使用更高效的索引匹配）
             $upsertStmt = $pdo->prepare("INSERT INTO customer_marketer 
                 (customer_id, marketer_name, marketer_ratio, marketer_index, remark) 
                 VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE 
-                marketer_ratio = VALUES(marketer_ratio),
+                marketer_ratio = IF(ABS(VALUES(marketer_ratio) - marketer_ratio) > 0.0001, VALUES(marketer_ratio), marketer_ratio),
                 remark = VALUES(remark)");
 
             $insertCount = 0;
@@ -610,28 +620,35 @@ class ImportController
                     $ratioRemark = $baseRemark;
                 }
 
-                // 更新或插入记录
+                // 在循环内部优化判断逻辑：
                 foreach ($customerMarketers as $marketer) {
-                    $uniqueKey = $customer['id'] . '-' . $marketer['index'];
-                    $oldRatio = $existingData[$uniqueKey]['marketer_ratio'] ?? null;
-                    $oldRemark = $existingData[$uniqueKey]['remark'] ?? null;
-
-                    $result = $upsertStmt->execute([
+                    $key = $customer['id'] . '_' . $marketer['index'];
+                    
+                    // 直接通过唯一索引判断是否存在
+                    if (isset($existingData[$customer['id']][$marketer['index']])) {
+                        $old = $existingData[$customer['id']][$marketer['index']];
+                        // 只有比例变化超过0.01%时才更新
+                        if (abs($marketer['ratio'] - $old['marketer_ratio']) < 0.0001 
+                            && $ratioRemark == $old['remark']) {
+                            continue; // 跳过无变化的记录
+                        }
+                    }
+                    
+                    $upsertStmt->execute([
                         $customer['id'],
                         $marketer['name'],
                         $marketer['ratio'],
                         $marketer['index'],
-                        $ratioRemark  // 动态备注内容
+                        $ratioRemark
                     ]);
                     
-                    $rowCount = $upsertStmt->rowCount();
-                    if ($rowCount === 1) {
-                        $insertCount++;
-                    } elseif ($rowCount > 0) { // 处理可能返回1或2的情况
-                        if ($marketer['ratio'] != $oldRatio || $ratioRemark != $oldRemark) {
-                            $updateCount++;
-                        }
-                    }
+                    // 简化计数逻辑
+                    $upsertStmt->rowCount() === 1 ? $insertCount++ : $updateCount++;
+                }
+
+                if (($insertCount + $updateCount) % 1000 === 0) {
+                    $pdo->commit();
+                    $pdo->beginTransaction();
                 }
             }
 
