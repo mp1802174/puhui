@@ -157,53 +157,57 @@
                                     <tr style="border-bottom: 1px solid #f0f0f0; transition: all 0.2s ease;">
                                         <td class="ps-4" style="padding: 12px;">
                                             {if $level == 'city' && isset($item['id'])}
-                                                <a href="?level=branch&parent_id={$item.id}&date={$current_date}
-                                                &city_balance={$item.balance}
-                                                &city_compare_yesterday={$item.compare_yesterday}
-                                                &city_compare_month={$item.compare_month}
-                                                &city_compare_year={$item.compare_year}
-                                                &city_yearly_avg={$item.yearly_avg}
-                                                &city_yearly_avg_yesterday={$item.yearly_avg_yesterday}
-                                                &city_yearly_avg_month={$item.yearly_avg_month}
-                                                &city_yearly_avg_year={$item.yearly_avg_year}">
-                                                {$item.name}
-                                                </a>
+                                                {php}
+                                                $url = "?level=branch&parent_id=" . $item['id'] . "&date=" . $current_date
+                                                     . "&city_balance=" . $item['balance']
+                                                     . "&city_compare_yesterday=" . $item['compare_yesterday']
+                                                     . "&city_compare_month=" . $item['compare_month']
+                                                     . "&city_compare_year=" . $item['compare_year']
+                                                     . "&city_yearly_avg=" . $item['yearly_avg']
+                                                     . "&city_yearly_avg_yesterday=" . $item['yearly_avg_yesterday']
+                                                     . "&city_yearly_avg_month=" . $item['yearly_avg_month']
+                                                     . "&city_yearly_avg_year=" . $item['yearly_avg_year'];
+                                                {/php}
+                                                <a href="{$url}">{$item.name}</a>
                                             {elseif $level == 'branch' && isset($item['id'])}
-                                                <a href="?level=accounting&parent_id={$item.id}&date={$current_date}
-                                                &branch_balance={$item.balance}
-                                                &branch_compare_yesterday={$item.compare_yesterday}
-                                                &branch_compare_month={$item.compare_month}
-                                                &branch_compare_year={$item.compare_year}
-                                                &branch_yearly_avg={$item.yearly_avg}
-                                                &branch_yearly_avg_yesterday={$item.yearly_avg_yesterday}
-                                                &branch_yearly_avg_month={$item.yearly_avg_month}
-                                                &branch_yearly_avg_year={$item.yearly_avg_year}">
-                                                {$item.name}
-                                                </a>
+                                                {php}
+                                                $url = "?level=accounting&parent_id=" . $item['id'] . "&date=" . $current_date
+                                                     . "&branch_balance=" . $item['balance']
+                                                     . "&branch_compare_yesterday=" . $item['compare_yesterday']
+                                                     . "&branch_compare_month=" . $item['compare_month']
+                                                     . "&branch_compare_year=" . $item['compare_year']
+                                                     . "&branch_yearly_avg=" . $item['yearly_avg']
+                                                     . "&branch_yearly_avg_yesterday=" . $item['yearly_avg_yesterday']
+                                                     . "&branch_yearly_avg_month=" . $item['yearly_avg_month']
+                                                     . "&branch_yearly_avg_year=" . $item['yearly_avg_year'];
+                                                {/php}
+                                                <a href="{$url}">{$item.name}</a>
                                             {elseif $level == 'accounting' && isset($item['id'])}
-                                                <a href="?level=employee&parent_id={$item.id}&date={$current_date}
-                                                &accounting_balance={$item.balance}
-                                                &accounting_compare_yesterday={$item.compare_yesterday}
-                                                &accounting_compare_month={$item.compare_month}
-                                                &accounting_compare_year={$item.compare_year}
-                                                &accounting_yearly_avg={$item.yearly_avg}
-                                                &accounting_yearly_avg_yesterday={$item.yearly_avg_yesterday}
-                                                &accounting_yearly_avg_month={$item.yearly_avg_month}
-                                                &accounting_yearly_avg_year={$item.yearly_avg_year}">
-                                                {$item.name}
-                                                </a>
+                                                {php}
+                                                $url = "?level=employee&parent_id=" . $item['id'] . "&date=" . $current_date
+                                                     . "&accounting_balance=" . $item['balance']
+                                                     . "&accounting_compare_yesterday=" . $item['compare_yesterday']
+                                                     . "&accounting_compare_month=" . $item['compare_month']
+                                                     . "&accounting_compare_year=" . $item['compare_year']
+                                                     . "&accounting_yearly_avg=" . $item['yearly_avg']
+                                                     . "&accounting_yearly_avg_yesterday=" . $item['yearly_avg_yesterday']
+                                                     . "&accounting_yearly_avg_month=" . $item['yearly_avg_month']
+                                                     . "&accounting_yearly_avg_year=" . $item['yearly_avg_year'];
+                                                {/php}
+                                                <a href="{$url}">{$item.name}</a>
                                             {elseif $level == 'employee' && isset($item['id'])}
-                                                <a href="?level=company&parent_id={$item.id}&date={$current_date}
-                                                &employee_balance={$item.balance}
-                                                &employee_compare_yesterday={$item.compare_yesterday}
-                                                &employee_compare_month={$item.compare_month}
-                                                &employee_compare_year={$item.compare_year}
-                                                &employee_yearly_avg={$item.yearly_avg}
-                                                &employee_yearly_avg_yesterday={$item.yearly_avg_yesterday}
-                                                &employee_yearly_avg_month={$item.yearly_avg_month}
-                                                &employee_yearly_avg_year={$item.yearly_avg_year}">
-                                                {$item.name}
-                                                </a>
+                                                {php}
+                                                $url = "?level=company&parent_id=" . $item['id'] . "&date=" . $current_date
+                                                     . "&employee_balance=" . $item['balance']
+                                                     . "&employee_compare_yesterday=" . $item['compare_yesterday']
+                                                     . "&employee_compare_month=" . $item['compare_month']
+                                                     . "&employee_compare_year=" . $item['compare_year']
+                                                     . "&employee_yearly_avg=" . $item['yearly_avg']
+                                                     . "&employee_yearly_avg_yesterday=" . $item['yearly_avg_yesterday']
+                                                     . "&employee_yearly_avg_month=" . $item['yearly_avg_month']
+                                                     . "&employee_yearly_avg_year=" . $item['yearly_avg_year'];
+                                                {/php}
+                                                <a href="{$url}">{$item.name}</a>
                                             {else}
                                                 {$item.name|default=''}
                                             {/if}
