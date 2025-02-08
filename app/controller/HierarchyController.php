@@ -284,7 +284,7 @@ class HierarchyController
         ]);
     }
 
-    private function getEmployeeData($accountingId, $date, $employeeName)
+    private function getEmployeeData($accountingId, $date)
     {
         
     }
