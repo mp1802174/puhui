@@ -152,7 +152,7 @@
                                 <tbody>
                                     {foreach $data as $item}
                                     <tr style="border-bottom: 1px solid #f0f0f0; transition: all 0.2s ease;">
-                                        <td class="ps-4" style="padding: 12px;">
+                                        <td class="ps-4" style="padding: 12px; {if $item.name == '未分配'}color: red;{/if}">
                                             {if $level == 'city' && isset($item['id'])}
                                                 {php}
                                                 $url = "?level=branch&parent_id=" . $item['id'] . "&date=" . $current_date
@@ -204,7 +204,13 @@
                                                      . "&employee_yearly_avg_month=" . $item['yearly_avg_month']
                                                      . "&employee_yearly_avg_year=" . $item['yearly_avg_year'];
                                                 {/php}
-                                                <a href="{$url}">{$item.name}</a>
+                                                <a href="{$url}">
+                                                    {if $item.name == '未分配'}
+                                                        <span style="color: red">{$item.name}</span>
+                                                    {else}
+                                                        <span>{$item.name}</span>
+                                                    {/if}
+                                                </a>
                                             {else}
                                                 {$item.name|default=''}
                                             {/if}

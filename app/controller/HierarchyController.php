@@ -336,7 +336,8 @@ SELECT
     SUM(年日均存款比月初) AS yearly_avg_month,
     SUM(年日均存款比年初) AS yearly_avg_year
 FROM employee_data
-GROUP BY 员工姓名;
+GROUP BY 员工姓名
+ORDER BY SUM(年日均存款余额) DESC;
 SQL;
 
         $result = Db::query($sql, [$parent_id, $date]);
