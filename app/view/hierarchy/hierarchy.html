@@ -85,10 +85,7 @@
                                 <h6 class="card-title">数据验证</h6>
                                 {if $level == 'employee'}
                                 <div class="alert alert-info mb-3">
-                                    <small>
-                                        注意：员工层级只统计有营销人的客户数据，因此合计数据会小于核算层级。
-                                        <br>当前核算机构下共有未分配营销人的余额：{$validation.no_employee_stats.balance|number_format=2}万元
-                                    </small>
+                                    
                                 </div>
                                 {/if}
                                 <div class="table-responsive">

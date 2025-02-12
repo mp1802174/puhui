@@ -157,22 +157,7 @@ class HierarchyController
             ];
         }
 
-        if ($level === 'employee') {
-            // 获取该核算机构下无营销人的客户余额总和
-            $noEmployeeTotal = $this->getNoEmployeeTotal($parentId, $currentDate);
-            
-            // 验证数据中添加无营销人的统计
-            $validation['no_employee_stats'] = [
-                'balance' => $noEmployeeTotal['balance'],
-                'compare_yesterday' => $noEmployeeTotal['compare_yesterday'],
-                'compare_month' => $noEmployeeTotal['compare_month'],
-                'compare_year' => $noEmployeeTotal['compare_year'],
-                'yearly_avg' => $noEmployeeTotal['yearly_avg'],
-                'yearly_avg_yesterday' => $noEmployeeTotal['yearly_avg_yesterday'],
-                'yearly_avg_month' => $noEmployeeTotal['yearly_avg_month'],
-                'yearly_avg_year' => $noEmployeeTotal['yearly_avg_year']
-            ];
-        }
+        
 
         return View::fetch('hierarchy/hierarchy', [
             'data' => $data,
@@ -284,9 +269,98 @@ class HierarchyController
         ]);
     }
 
-    private function getEmployeeData($accountingId, $date)
+    public function getEmployeeData($parent_id, $date)
     {
-        
+        $sql = <<<SQL
+WITH ls AS (
+    SELECT 
+        b.customer_id,
+        i.客户名称,
+        b.账户余额,
+        b.时点存款比昨日,
+        b.时点存款比月初,
+        b.时点存款比年初,
+        b.月日均存款余额,
+        b.年日均存款余额,
+        b.年日均存款比昨日,
+        b.年日均存款比月初,
+        b.年日均存款比年初
+    FROM daily_balance b
+    JOIN customer_info i ON b.customer_id = i.ID
+    WHERE i.核算机构编号 = ? 
+      AND b.日期 = ?
+),
+customer_ratio_check AS (
+    SELECT 
+        customer_id,
+        COALESCE(SUM(marketer_ratio), 0) AS total_ratio,
+        COALESCE(MAX(CASE WHEN remark LIKE '%比例异常%' THEN 1 ELSE 0 END), 0) AS has_remark
+    FROM customer_marketer
+    GROUP BY customer_id
+),
+employee_data AS (
+    SELECT 
+        COALESCE(m.marketer_name, '未分配') AS 员工姓名,
+        CASE 
+            WHEN cr.has_remark = 1 
+               OR cr.total_ratio <> 1.00 
+               OR m.id IS NULL 
+            THEN ls.账户余额
+            ELSE ls.账户余额 * m.marketer_ratio 
+        END AS 账户余额,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.时点存款比昨日 ELSE ls.时点存款比昨日 * m.marketer_ratio END AS 时点存款比昨日,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.时点存款比月初 ELSE ls.时点存款比月初 * m.marketer_ratio END AS 时点存款比月初,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.时点存款比年初 ELSE ls.时点存款比年初 * m.marketer_ratio END AS 时点存款比年初,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.月日均存款余额 ELSE ls.月日均存款余额 * m.marketer_ratio END AS 月日均存款余额,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.年日均存款余额 ELSE ls.年日均存款余额 * m.marketer_ratio END AS 年日均存款余额,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.年日均存款比昨日 ELSE ls.年日均存款比昨日 * m.marketer_ratio END AS 年日均存款比昨日,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.年日均存款比月初 ELSE ls.年日均存款比月初 * m.marketer_ratio END AS 年日均存款比月初,
+        CASE WHEN cr.has_remark = 1 OR cr.total_ratio <> 1.00 OR m.id IS NULL THEN ls.年日均存款比年初 ELSE ls.年日均存款比年初 * m.marketer_ratio END AS 年日均存款比年初
+    FROM ls
+    LEFT JOIN customer_ratio_check cr 
+        ON ls.customer_id = cr.customer_id
+    LEFT JOIN customer_marketer m 
+        ON ls.customer_id = m.customer_id
+        AND cr.total_ratio = 1.00
+        AND cr.has_remark = 0
+)
+SELECT 
+    员工姓名 AS employee_name,
+    SUM(账户余额) AS balance,
+    SUM(时点存款比昨日) AS compare_yesterday,
+    SUM(时点存款比月初) AS compare_month,
+    SUM(时点存款比年初) AS compare_year,
+    SUM(月日均存款余额) AS monthly_avg,
+    SUM(年日均存款余额) AS yearly_avg,
+    SUM(年日均存款比昨日) AS yearly_avg_yesterday,
+    SUM(年日均存款比月初) AS yearly_avg_month,
+    SUM(年日均存款比年初) AS yearly_avg_year
+FROM employee_data
+GROUP BY 员工姓名;
+SQL;
+
+        $result = Db::query($sql, [$parent_id, $date]);
+
+        // 处理无数据情况
+        if (empty($result)) {
+            return [];
+        }
+
+        // 字段类型转换（保持万元单位）
+        return array_map(function($item) {
+            return [
+                'name' => $item['employee_name'],
+                'balance' => (float)$item['balance'],
+                'compare_yesterday' => (float)$item['compare_yesterday'],
+                'compare_month' => (float)$item['compare_month'],
+                'compare_year' => (float)$item['compare_year'],
+                'monthly_avg' => (float)$item['monthly_avg'],
+                'yearly_avg' => (float)$item['yearly_avg'],
+                'yearly_avg_yesterday' => (float)$item['yearly_avg_yesterday'],
+                'yearly_avg_month' => (float)$item['yearly_avg_month'],
+                'yearly_avg_year' => (float)$item['yearly_avg_year']
+            ];
+        }, $result);
     }
 
     /**
