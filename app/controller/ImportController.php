@@ -49,9 +49,9 @@ class ImportController
             // $pdo->exec("TRUNCATE TABLE customer_info");
             
             $infoSql = "INSERT INTO customer_info (
-                开户日期, 客户编号, 对公客户账号, 客户名称, 
+                开户日期, 客户编号, 对公客户账号, 客户名称,
                 核算机构, 客户责任部门, 账户性质, 核算机构编号,
-                经办人员工编号, 业务标识号, 
+                经办人员工编号, 业务标识号,
                 营销人一, 营销人二, 营销人三, 营销人四, 营销人五,
                 营销人六, 营销人七, 营销人八, 营销人九, 营销人一十,
                 营销人一十一, 营销人一十二,
@@ -61,7 +61,7 @@ class ImportController
                 账户状态,
                 created_at
             )
-            SELECT 
+            SELECT
                 开户日期, 客户编号, 对公客户账号, 客户名称,
                 核算机构, 客户责任部门, 账户性质, 核算机构编号,
                 经办人员工编号, 业务标识号,
@@ -75,9 +75,37 @@ class ImportController
                 NOW() as created_at
             FROM daily_record
             ON DUPLICATE KEY UPDATE
-                customer_info.账户状态 = COALESCE(VALUES(账户状态), customer_info.账户状态),
-                customer_info.客户名称 = COALESCE(VALUES(客户名称), customer_info.客户名称),
-                customer_info.核算机构 = COALESCE(VALUES(核算机构), customer_info.核算机构)";
+                账户状态 = VALUES(账户状态),
+                客户名称 = VALUES(客户名称),
+                核算机构 = VALUES(核算机构),
+                客户责任部门 = VALUES(客户责任部门),
+                开户日期 = VALUES(开户日期),
+                经办人员工编号 = VALUES(经办人员工编号),
+                业务标识号 = VALUES(业务标识号),
+                营销人一 = VALUES(营销人一),
+                营销人二 = VALUES(营销人二),
+                营销人三 = VALUES(营销人三),
+                营销人四 = VALUES(营销人四),
+                营销人五 = VALUES(营销人五),
+                营销人六 = VALUES(营销人六),
+                营销人七 = VALUES(营销人七),
+                营销人八 = VALUES(营销人八),
+                营销人九 = VALUES(营销人九),
+                营销人一十 = VALUES(营销人一十),
+                营销人一十一 = VALUES(营销人一十一),
+                营销人一十二 = VALUES(营销人一十二),
+                营销人名称一 = VALUES(营销人名称一),
+                营销人名称二 = VALUES(营销人名称二),
+                营销人名称三 = VALUES(营销人名称三),
+                营销人名称四 = VALUES(营销人名称四),
+                营销人名称五 = VALUES(营销人名称五),
+                营销人名称六 = VALUES(营销人名称六),
+                营销人名称七 = VALUES(营销人名称七),
+                营销人名称八 = VALUES(营销人名称八),
+                营销人名称九 = VALUES(营销人名称九),
+                营销人名称一十 = VALUES(营销人名称一十),
+                营销人名称一十一 = VALUES(营销人名称一十一),
+                营销人名称一十二 = VALUES(营销人名称一十二)";
             
             $pdo->exec($infoSql);
             
@@ -87,7 +115,7 @@ class ImportController
             // 2. 导入余额信息
             // $pdo->exec("TRUNCATE TABLE daily_balance");
             
-            $balanceSql = "INSERT INTO daily_balance (
+            $balanceSql = "REPLACE INTO daily_balance (
                 customer_id,
                 日期,
                 账户余额,
@@ -103,7 +131,7 @@ class ImportController
                 认定日期,
                 created_at
             )
-            SELECT 
+            SELECT
                 i.ID as customer_id,
                 r.年日均最新日期 as 日期,
                 r.账户余额,
@@ -119,9 +147,9 @@ class ImportController
                 r.认定日期,
                 NOW() as created_at
             FROM daily_record r
-            INNER JOIN customer_info i ON 
-                r.客户编号 = i.客户编号 AND 
-                r.对公客户账号 = i.对公客户账号 AND 
+            INNER JOIN customer_info i ON
+                r.客户编号 = i.客户编号 AND
+                r.对公客户账号 = i.对公客户账号 AND
                 r.账户性质 = i.账户性质";
             
             $pdo->exec($balanceSql);
