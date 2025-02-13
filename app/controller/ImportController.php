@@ -97,6 +97,10 @@ class ImportController
                 月日均存款余额,
                 年日均存款余额,
                 年日均存款比昨日,
+                年日均存款比月初,
+                年日均存款比年初,
+                认定状态,
+                认定日期,
                 created_at
             )
             SELECT 
@@ -109,6 +113,10 @@ class ImportController
                 r.月日均存款余额,
                 r.年日均存款余额,
                 r.年日均存款比昨日,
+                r.年日均存款比月初,
+                r.年日均存款比年初,
+                r.认定状态,
+                r.认定日期,
                 NOW() as created_at
             FROM daily_record r
             INNER JOIN customer_info i ON 

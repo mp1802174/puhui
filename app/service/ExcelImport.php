@@ -284,15 +284,14 @@ class ExcelImport
                         $value = $dateValue->format('Y-m-d');
                     } else {
                         $timestamp = strtotime($value);
-                        if ($timestamp !== false) {
-                            $value = date('Y-m-d', $timestamp);
-                        }
+                        $value = $timestamp ? date('Y-m-d', $timestamp) : null;
                     }
                 }
                 break;
             default:
                 $value = strval($value);
         }
+        
         return $value;
     }
 
