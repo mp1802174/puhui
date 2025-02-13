@@ -92,6 +92,7 @@
                     url: '/daily_record/import_progress',
                     data: { filePath: filePath },
                     success: function(res) {
+                        console.log("Progress Response:", res);
                         if (res.code === 1 && res.data) {
                             var data = res.data;
                             

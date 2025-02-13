@@ -142,6 +142,7 @@ class ExcelImport
                 'elapsed' => round(microtime(true) - $startTime, 2)
             ];
             cache($cacheKey, $finalProgress, 3600);
+            Log::info("Final Progress Data:", $finalProgress);
 
             // 记录导入历史
             if ($this->successCount > 0) {
@@ -367,6 +368,7 @@ class ExcelImport
     {
         $cacheKey = 'excel_import_progress_' . md5($filePath);
         $progress = cache($cacheKey);
+        Log::info("Get Progress from Cache:", $progress);
         return $progress ?: [
             'total' => 0,
             'current' => 0,
