@@ -74,12 +74,13 @@
             var loadingInterval;
 
             function startLoadingAnimation() {
-                var dots = 0;
+                startTime = new Date().getTime();
                 loadingInterval = setInterval(function() {
-                    dots = (dots + 1) % 10; // 修改为 10，这样会显示 0 到 9 个点
-                    var text = '正在解析文件，请稍候' + '.'.repeat(dots);
+                    var currentTime = new Date().getTime();
+                    var seconds = Math.floor((currentTime - startTime) / 1000);
+                    var text = '正在解析文件，已耗时 ' + seconds + ' 秒';
                     $('#loadingMessage').text(text);
-                }, 500);
+                }, 1000);
             }
 
             function stopLoadingAnimation() {
@@ -192,17 +193,23 @@
 
             // 数据处理按钮点击事件
             $('#dataButton').on('click', function() {
-                $('#loadingData').removeClass('d-none'); // 显示 loading 提示
-                $('#dataButton').prop('disabled', true); // 禁用按钮
-                $('#result').empty(); // 清空之前的结果信息
+                startTime = new Date().getTime();
+                var dataLoadingInterval = setInterval(function() {
+                    var currentTime = new Date().getTime();
+                    var seconds = Math.floor((currentTime - startTime) / 1000);
+                    $('#loadingData').removeClass('d-none').text('数据处理中，已耗时 ' + seconds + ' 秒');
+                }, 1000);
+
+                $('#dataButton').prop('disabled', true);
+                $('#result').empty();
 
                 $.ajax({
-                    url: '/import/data', // 数据处理的 URL
-                    type: 'GET', // 或 'POST'，根据你的路由配置
-                    dataType: 'json', // 预期服务器返回 JSON
+                    url: '/import/data',
+                    type: 'GET',
+                    dataType: 'json',
                     success: function(response) {
-                        $('#loadingData').addClass('d-none'); // 隐藏 loading 提示
-                        $('#dataButton').prop('disabled', false); // 启用按钮
+                        clearInterval(dataLoadingInterval);
+                        $('#dataButton').prop('disabled', false);
 
                         if (response.code === 1) {
                             var data = response.data;
