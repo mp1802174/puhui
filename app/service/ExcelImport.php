@@ -11,7 +11,7 @@ use PDO;
 class ExcelImport
 {
     private $pdo;
-    private $batchSize = 1000;
+    private $batchSize = 3000;
     private $stopFile;
     private $errorMessages = [];
     private $errorSummary = [];

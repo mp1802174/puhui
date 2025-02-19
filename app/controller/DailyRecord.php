@@ -16,6 +16,7 @@ class DailyRecord
      */
     public function index()
     {
+        
         return View::fetch();
     }
 

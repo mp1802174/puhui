@@ -35,7 +35,8 @@ class ImportController
      */
     public function importData()
     {
-        Log::info('=== 开始导入数据 ===');
+        set_time_limit(0);
+        Log::info('=== 开始数据同步 ===');
         
         try {
             $pdo = $this->getPDO();
@@ -44,9 +45,19 @@ class ImportController
             $sourceCount = $pdo->query("SELECT COUNT(*) FROM daily_record")->fetchColumn();
             Log::info("原始数据数量: {$sourceCount} 条记录");
             
-            // 1. 导入客户基本信息
+            // 检查重复记录
+            $duplicatesSql = "SELECT 客户编号, 对公客户账号, 账户性质, COUNT(*) as count 
+                              FROM daily_record 
+                              GROUP BY 客户编号, 对公客户账号, 账户性质 
+                              HAVING COUNT(*) > 1";
+            $duplicates = $pdo->query($duplicatesSql)->fetchAll();
+            $duplicateCount = count($duplicates);
+            
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-            // $pdo->exec("TRUNCATE TABLE customer_info");
+            
+            // 1. 导入客户基本信息
+            // 获取 customer_info 表导入前的记录数
+            $infoCountBefore = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
             
             $infoSql = "INSERT INTO customer_info (
                 开户日期, 客户编号, 对公客户账号, 客户名称,
@@ -109,11 +120,16 @@ class ImportController
             
             $pdo->exec($infoSql);
             
-            $infoCount = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
-            Log::info("客户基本信息导入完成: {$infoCount} 条记录");
+            // 获取 customer_info 表导入后的记录数
+            $infoCountAfter = $pdo->query("SELECT COUNT(*) FROM customer_info")->fetchColumn();
+            $infoInsertCount = $infoCountAfter - $infoCountBefore; // 计算新增记录数，这里假设更新不算作新增
+            $infoUpdateCount = 0; // 暂时简化更新计数，后续如果需要精确更新计数，需要更复杂的逻辑
+            
+            Log::info("客户基本信息导入完成: 总记录数 {$infoCountAfter} 条，新增: {$infoInsertCount} 条");
             
             // 2. 导入余额信息
-            // $pdo->exec("TRUNCATE TABLE daily_balance");
+            // 获取 daily_balance 表导入前的记录数
+            $balanceCountBefore = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
             
             $balanceSql = "REPLACE INTO daily_balance (
                 customer_id,
@@ -152,10 +168,13 @@ class ImportController
                 r.对公客户账号 = i.对公客户账号 AND
                 r.账户性质 = i.账户性质";
             
-            $pdo->exec($balanceSql);
+            $balanceAffectedRows = $pdo->exec($balanceSql);
             
-            $balanceCount = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
-            Log::info("余额信息导入完成: {$balanceCount} 条记录");
+            // 获取 daily_balance 表导入后的记录数
+            $balanceCountAfter = $pdo->query("SELECT COUNT(*) FROM daily_balance")->fetchColumn();
+            $balanceInsertCount = $balanceCountAfter - $balanceCountBefore;  // 用差值计算实际新增数
+            
+            Log::info("余额信息导入完成: 总记录数 {$balanceCountAfter} 条，新增: {$balanceInsertCount} 条");
             
             // 3. 清空原始数据表
             $pdo->exec("INSERT INTO daily_record_bak SELECT * FROM daily_record");
@@ -169,8 +188,24 @@ class ImportController
             // 清理缓存文件
             $this->clearCache();
             
-            // 返回简单的消息
-            return "<script>alert('导入完成！\\n原始数据：{$sourceCount} 条\\n客户信息：{$infoCount} 条\\n余额信息：{$balanceCount} 条');window.location.href='/daily_record/index';</script>";
+            // 返回JSON格式的结果，包含详细计数信息
+            return json([
+                'code' => 1,
+                'msg' => '数据同步完成！',
+                'data' => [
+                    'sourceCount' => $sourceCount,
+                    'duplicateCount' => $duplicateCount,  // 添加重复记录数
+                    'info' => [
+                        'total' => $infoCountAfter,
+                        'insert' => $infoInsertCount,
+                        'update' => $infoUpdateCount
+                    ],
+                    'balance' => [
+                        'total' => $balanceCountAfter,
+                        'insert' => $balanceInsertCount  // 这里显示实际新增的记录数
+                    ]
+                ]
+            ]);
             
         } catch (\Exception $e) {
             if (isset($pdo)) {
@@ -182,7 +217,10 @@ class ImportController
             $this->clearCache();
             
             Log::error("导入失败: " . $e->getMessage());
-            return "<script>alert('导入失败：" . addslashes($e->getMessage()) . "');window.location.href='/daily_record/index';</script>";
+            return json([
+                'code' => 0,
+                'msg' => '导入失败：' . $e->getMessage()
+            ]);
         }
     }
 
